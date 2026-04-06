@@ -1,19 +1,21 @@
 # Command Parser
 
-Parse and validate `/restructure` command arguments.
+Parse and validate `/ui-restructure` command arguments.
 
 ---
 
 ## Command Grammar
 
 ```
-/restructure [OPTIONS]
+/ui-restructure [OPTIONS]
 
 OPTIONS:
+  --god-mode                 User-first redesign mode (see modes/godmode.md)
   --style    <style-name>    Named style engine to apply
-  --mode     <mode-name>     Restructure mode
+  --mode     <mode-name>     Restructure mode (ignored when --god-mode is set)
   --prompt   "<string>"      Custom UI description
   --keep-tokens              Preserve existing tokens (flag)
+  --remove-tokens            Explicitly reset and rebuild all tokens
   --grid     <grid-type>     Force grid layout type
   --density  <density-type>  Apply density preset
 ```
@@ -21,6 +23,37 @@ OPTIONS:
 ---
 
 ## Argument Values
+
+### `--god-mode`
+
+Boolean flag (no value). Activates the user-first redesign pipeline.
+
+When set:
+- Read `references/user-mindset.md` and `modes/godmode.md` fully
+- Skip standard modes (full/layout/theme/grid) — god mode replaces them
+- Run the 7-phase god mode pipeline
+- Tokens are **preserved by default** in god mode
+- Add `--remove-tokens` alongside `--god-mode` to also reset tokens
+
+God Mode can combine with:
+- `--remove-tokens` — resets tokens after god mode redesign
+- `--style` — defines which token system to apply when `--remove-tokens` is also used
+
+God Mode cannot combine with:
+- `--mode` — ignored when `--god-mode` is present (warn user)
+- `--keep-tokens` — redundant in god mode (tokens are kept by default; warn user)
+
+### `--remove-tokens`
+
+Boolean flag (no value). Explicitly resets all design tokens.
+
+When set:
+- Run Step 7 (token reset) and regenerate tokens with the active style engine
+- Default behavior WITHOUT `--remove-tokens` in god mode: tokens preserved
+- Default behavior WITHOUT `--remove-tokens` in standard mode: tokens ARE reset
+
+This exists primarily for god mode, where tokens are kept by default.
+In standard mode, tokens are reset by default unless `--keep-tokens` is set.
 
 ### `--style`
 

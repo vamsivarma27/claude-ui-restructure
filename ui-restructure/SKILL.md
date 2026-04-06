@@ -20,7 +20,7 @@ metadata:
   version: "1.1.0"
   category: ui-design
   tags: ui,restructure,redesign,design-system,tailwind,nextjs,react,vue,tokens
-argument-hint: "[--style apple|linear|minimal|dashboard] [--mode full|layout|theme|grid] [--prompt 'custom UI'] [--keep-tokens] [--grid cards] [--density compact]"
+argument-hint: "[--god-mode] [--style apple|linear|minimal|dashboard] [--mode full|layout|theme|grid] [--prompt 'custom UI'] [--keep-tokens] [--remove-tokens] [--grid cards] [--density compact]"
 ---
 
 # Claude UI Restructure Skill
@@ -28,6 +28,21 @@ argument-hint: "[--style apple|linear|minimal|dashboard] [--mode full|layout|the
 You are executing the `/restructure` skill. Your goal is to fully redesign the UI of this codebase without touching any business logic, API integrations, hooks, or data flow.
 
 Follow the 10-step execution pipeline below. Read each step fully before acting on it.
+
+---
+
+## God Mode — Special Execution Path
+
+If the command contains `--god-mode`, skip Steps 1–11 below and instead:
+
+1. Read `references/user-mindset.md` fully — internalize the 10 Laws of User Behavior and all 10 developer mistakes
+2. Read `modes/godmode.md` fully — this is your complete execution guide
+3. Execute the 7-phase God Mode pipeline defined there
+4. **Default: tokens are preserved.** Only add `--remove-tokens` if the user explicitly passed that flag.
+5. If `--remove-tokens` is also passed, after completing God Mode, additionally run Step 7 (token reset) and Step 10 (token rebuild) from the standard pipeline using the style from `--style` (default: minimal).
+
+God Mode does NOT combine with `--mode`. It replaces the mode entirely.
+God Mode CAN combine with `--style` — the style engine defines visual language when `--remove-tokens` is also used.
 
 ---
 
@@ -349,18 +364,22 @@ Polish pass: ✓ (motion, states, typography, icons, accessibility)
 
 | Command | Action |
 |---|---|
-| `/restructure` | Full redesign with default (minimal) style |
-| `/restructure --style apple` | Apple glassmorphism style |
-| `/restructure --style linear` | Linear compact style |
-| `/restructure --style minimal` | Clean minimal style |
-| `/restructure --style dashboard` | Data-dense dashboard style |
-| `/restructure --mode layout` | Change layout structure only |
-| `/restructure --mode theme` | Change tokens/colors only |
-| `/restructure --mode grid` | Convert lists to card grids |
-| `/restructure --keep-tokens` | Rebuild layout but keep existing tokens |
-| `/restructure --grid cards` | Force card grid layout |
-| `/restructure --density compact` | Apply compact spacing density |
-| `/restructure --prompt "..."` | Custom redesign prompt |
+| `/ui-restructure` | Full redesign, default minimal style, resets tokens |
+| `/ui-restructure --god-mode` | **User-first redesign** — thinks like 100 users, keeps tokens, fixes UX hierarchy |
+| `/ui-restructure --god-mode --remove-tokens` | God Mode + reset tokens with new design system |
+| `/ui-restructure --god-mode --style apple` | God Mode + rebuild tokens in Apple style |
+| `/ui-restructure --style apple` | Apple glassmorphism style |
+| `/ui-restructure --style linear` | Linear compact style |
+| `/ui-restructure --style minimal` | Clean minimal style |
+| `/ui-restructure --style dashboard` | Data-dense dashboard style |
+| `/ui-restructure --mode layout` | Change layout structure only, keep tokens |
+| `/ui-restructure --mode theme` | Change tokens/colors only |
+| `/ui-restructure --mode grid` | Convert lists to card grids |
+| `/ui-restructure --keep-tokens` | Rebuild layout but keep existing tokens |
+| `/ui-restructure --remove-tokens` | Explicitly reset all tokens (same as default without --keep-tokens) |
+| `/ui-restructure --grid cards` | Force card grid layout |
+| `/ui-restructure --density compact` | Apply compact spacing density |
+| `/ui-restructure --prompt "..."` | Custom redesign prompt |
 
 ---
 
