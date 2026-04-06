@@ -24,7 +24,7 @@ Your hooks, API calls, handlers, data mappings — untouched.
 
 ```bash
 # Using openskills
-npx openskills install vamsivarma27/claude-ui-restructure
+npx openskills install vamsivarma27/ui-restructure
 
 # Manual (copy to project)
 cp -r claude-ui-restructure .claude/skills/

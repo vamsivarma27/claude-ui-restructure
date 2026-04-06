@@ -11,7 +11,7 @@
 **Do not open a public GitHub issue for security vulnerabilities.**
 
 Please use GitHub's private vulnerability reporting:
-👉 [Report a vulnerability](https://github.com/vamsivarma27/claude-ui-restructure/security/advisories/new)
+👉 [Report a vulnerability](https://github.com/vamsivarma27/ui-restructure/security/advisories/new)
 
 Include:
 - Description of the vulnerability
