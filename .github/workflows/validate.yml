@@ -1,0 +1,31 @@
+name: Validate Skill
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    name: Validate SKILL.md
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install agent-skills-cli
+        run: npm install -g agent-skills-cli
+
+      - name: Validate skill
+        run: skills validate ./ui-restructure
+
+      - name: Check CHANGELOG.md updated
+        if: github.event_name == 'pull_request'
+        run: |
+          if git diff --name-only origin/main...HEAD | grep -q "CHANGELOG.md"; then
+            echo "✓ CHANGELOG.md updated"
+          else
+            echo "⚠ Warning: CHANGELOG.md was not updated in this PR"
+          fi

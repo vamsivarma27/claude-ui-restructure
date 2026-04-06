@@ -1,0 +1,64 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v[0-9]+.[0-9]+.[0-9]+'
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Extract version from tag
+        id: version
+        run: echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+
+      - name: Extract changelog section for this version
+        id: changelog
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          # Strip leading 'v' for changelog lookup
+          VERSION_NUM="${VERSION#v}"
+          # Extract the section between this version and the previous one
+          NOTES=$(awk "/^## \[$VERSION_NUM\]/{found=1; next} found && /^## \[/{exit} found{print}" CHANGELOG.md)
+          # Escape for GitHub Actions output
+          echo "notes<<EOF" >> $GITHUB_OUTPUT
+          echo "$NOTES" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Validate skill before release
+        run: |
+          npm install -g agent-skills-cli
+          skills validate ./ui-restructure
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.version }}
+          name: ${{ steps.version.outputs.version }}
+          body: |
+            ## What's in this release
+
+            ${{ steps.changelog.outputs.notes }}
+
+            ---
+
+            ## Install
+
+            ```bash
+            npx openskills install vamsivarma27/claude-ui-restructure
+            ```
+
+            Or manually copy `ui-restructure/` into `.claude/skills/` in your project.
+
+            **[View on SkillsMP →](https://skillsmp.com/skills/ui-restructure)**
+          draft: false
+          prerelease: false

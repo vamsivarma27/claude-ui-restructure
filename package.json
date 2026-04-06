@@ -1,13 +1,12 @@
 {
-  "name": "claude-ui-restructure",
-  "version": "1.0.0",
-  "description": "Claude Code skill — restructure UI from scratch without deleting project logic. Solves UI lock-in across Next.js, React, Vue, Tailwind, and more.",
+  "name": "ui-restructure",
+  "version": "1.1.0",
+  "description": "AI skill — restructure UI from scratch without deleting project logic. Works with Claude Code, Cursor, Windsurf, Cline, Copilot, and any Agent Skills-compatible tool.",
   "keywords": [
-    "claude",
-    "claude-code",
     "skill",
     "skill-md",
     "skillsmp",
+    "agent-skills",
     "ui",
     "redesign",
     "restructure",
@@ -17,25 +16,31 @@
     "react",
     "vue",
     "tokens",
+    "claude-code",
+    "cursor",
+    "windsurf",
+    "cline",
     "glassmorphism",
     "apple",
     "linear",
-    "dashboard"
+    "dashboard",
+    "god-mode",
+    "ux"
   ],
   "author": "Vamsi Varma",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/vamsivarma27/claude-ui-restructure.git"
+    "url": "https://github.com/vamsivarma27/ui-restructure.git"
   },
-  "homepage": "https://github.com/vamsivarma27/claude-ui-restructure#readme",
+  "homepage": "https://github.com/vamsivarma27/ui-restructure#readme",
   "bugs": {
-    "url": "https://github.com/vamsivarma27/claude-ui-restructure/issues"
+    "url": "https://github.com/vamsivarma27/ui-restructure/issues"
   },
   "files": [
-    "claude-ui-restructure/"
+    "ui-restructure/"
   ],
   "scripts": {
-    "validate": "npx skills-ref validate ./claude-ui-restructure"
+    "validate": "npx agent-skills-cli validate ./ui-restructure"
   }
 }
