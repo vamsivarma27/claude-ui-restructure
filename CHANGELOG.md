@@ -9,11 +9,23 @@ Versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+---
+
+## [1.2.0] — 2026-04-06
+
 ### Added
-- `--god-mode` parameter — user-first UI redesign that simulates 100 user mindsets
-- `--remove-tokens` flag — explicit token reset (default in god mode is to preserve tokens)
-- `modes/godmode.md` — 7-phase god mode pipeline
+- `--god-mode` parameter — user-first redesign simulating 100 user mindsets
+- `--remove-tokens` flag — explicit token reset (god mode keeps tokens by default)
+- `modes/godmode.md` — 7-phase pipeline: page inventory, friction audit, 6 UX principles, redesign decisions, placement rules, apply changes, report
 - `references/user-mindset.md` — 10 Laws of User Behavior + 10 common developer UX mistakes
+- `ui-restructure/assets/banner.svg` — README banner image
+- Professional README overhaul — full problem/solution, every command documented individually
+- CI workflow (`validate.yml`) — validates SKILL.md on every PR
+- Release workflow (`release.yml`) — auto GitHub Release on git tag push
+
+### Fixed
+- SKILL.md description trimmed to under 1024 characters (SkillsMP validation requirement)
+- Repo renamed `claude-ui-restructure` → `ui-restructure` for multi-tool generic naming
 
 ---
 

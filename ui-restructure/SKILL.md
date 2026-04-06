@@ -1,23 +1,11 @@
 ---
 name: ui-restructure
 description: |
-  Restructure and redesign UI from scratch without deleting project logic. Solves UI lock-in caused by hardcoded design tokens, layout structure embedded in JSX, and spacing repeated across components. Reverse engineers existing UI, extracts layout intent, preserves all business logic, API integrations, hooks, and data flow — then rebuilds the UI with a fresh design system.
-
-  Use this skill when:
-  - You want to redesign the UI without losing backend/logic code
-  - AI-generated UI has become visually locked into an old structure
-  - You want to apply a named design system (Apple, Linear, Minimal, Dashboard)
-  - You want to convert list layouts to card grids
-  - You need to reset design tokens and rebuild spacing/typography scales
-  - You want a full or partial UI rebuild (layout-only, theme-only, grid-only)
-
-  Also applies a mandatory world-class polish pass: smooth motion with spring physics and correct easing curves, micro-interactions on every interactive element (hover lift, press scale, focus rings), proper typography rhythm, optical icon alignment, loading/empty/error states, and WCAG accessibility. Produces Stripe/Linear/Vercel-quality UI.
-
-  Supports: Next.js, React (Vite/CRA), Vue 3, Tailwind, CSS modules, styled-components, shadcn, plain CSS.
+  Solves UI lock-in. Reverse engineers your existing UI, strips all layout/token decisions, preserves every hook, handler, and API call untouched, then rebuilds the UI from scratch with a fresh design system. Use /ui-restructure to fully redesign, --style apple|linear|minimal|dashboard for named styles, --mode layout|theme|grid for partial rebuilds, --god-mode to redesign from the user's perspective using 100-user mindset simulation and 6 UX principles, --keep-tokens to preserve your token system, --prompt for custom redesigns. Applies mandatory world-class polish: spring motion, 5-state micro-interactions, 8pt spacing grid, WCAG accessibility. Supports Next.js, React, Vue 3, Tailwind, CSS Modules, styled-components, shadcn.
 license: MIT
 metadata:
   author: claude-ui-restructure
-  version: "1.1.0"
+  version: "1.2.0"
   category: ui-design
   tags: ui,restructure,redesign,design-system,tailwind,nextjs,react,vue,tokens
 argument-hint: "[--god-mode] [--style apple|linear|minimal|dashboard] [--mode full|layout|theme|grid] [--prompt 'custom UI'] [--keep-tokens] [--remove-tokens] [--grid cards] [--density compact]"
