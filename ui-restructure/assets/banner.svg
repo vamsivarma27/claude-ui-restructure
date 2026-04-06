@@ -1,0 +1,110 @@
+<svg width="1280" height="400" viewBox="0 0 1280 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1280" height="400" fill="#0A0A0A"/>
+
+  <!-- Subtle grid lines -->
+  <line x1="0" y1="100" x2="1280" y2="100" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="0" y1="200" x2="1280" y2="200" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="0" y1="300" x2="1280" y2="300" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="320" y1="0" x2="320" y2="400" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="640" y1="0" x2="640" y2="400" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+  <line x1="960" y1="0" x2="960" y2="400" stroke="#ffffff" stroke-opacity="0.03" stroke-width="1"/>
+
+  <!-- Left side — "Before" code block -->
+  <rect x="60" y="80" width="380" height="240" rx="10" fill="#111111" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+  <!-- Code block header -->
+  <rect x="60" y="80" width="380" height="36" rx="10" fill="#1a1a1a"/>
+  <rect x="60" y="96" width="380" height="20" fill="#1a1a1a"/>
+  <circle cx="84" cy="98" r="5" fill="#FF5F57"/>
+  <circle cx="102" cy="98" r="5" fill="#FFBD2E"/>
+  <circle cx="120" cy="98" r="5" fill="#28C840"/>
+  <text x="200" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#ffffff" fill-opacity="0.3" text-anchor="middle" dominant-baseline="middle">component.tsx — BEFORE</text>
+
+  <!-- Code lines — Before (messy locked-in code) -->
+  <text x="80" y="138" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">{"<div className="}</text>
+  <text x="80" y="155" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#EF4444">  "flex gap-4 p-6 max-w-7xl</text>
+  <text x="80" y="172" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#EF4444">   mx-auto bg-gray-50</text>
+  <text x="80" y="189" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#EF4444">   rounded-lg shadow-md"</text>
+  <text x="80" y="206" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">{">"}</text>
+  <text x="80" y="223" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">  {"{items.map(item => ("}</text>
+  <text x="80" y="240" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">    {"<Card className="}</text>
+  <text x="80" y="257" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#EF4444">      "p-4 rounded-xl</text>
+  <text x="80" y="274" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#EF4444">       shadow-md border"</text>
+  <text x="80" y="291" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">    {"/>"}</text>
+  <text x="80" y="308" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">  {"))"}</text>
+
+  <!-- Lock icon in center-left -->
+  <text x="250" y="340" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" fill="#EF4444" fill-opacity="0.7" text-anchor="middle">⚠ UI locked in</text>
+
+  <!-- Center arrow -->
+  <g transform="translate(520, 200)">
+    <!-- Arrow body -->
+    <rect x="-30" y="-1.5" width="60" height="3" rx="1.5" fill="#6366F1" fill-opacity="0.6"/>
+    <!-- Arrow head -->
+    <polygon points="30,-8 46,0 30,8" fill="#6366F1" fill-opacity="0.6"/>
+    <!-- Command label above arrow -->
+    <rect x="-68" y="-32" width="136" height="22" rx="6" fill="#6366F1" fill-opacity="0.15" stroke="#6366F1" stroke-opacity="0.3" stroke-width="1"/>
+    <text x="0" y="-17" font-family="'SF Mono', 'Monaco', monospace" font-size="11" fill="#818CF8" text-anchor="middle">/ui-restructure</text>
+  </g>
+
+  <!-- Right side — "After" clean code block -->
+  <rect x="840" y="80" width="380" height="240" rx="10" fill="#111111" stroke="#6366F1" stroke-opacity="0.3" stroke-width="1"/>
+  <!-- Glow effect behind right panel -->
+  <rect x="840" y="80" width="380" height="240" rx="10" fill="url(#glow)" fill-opacity="0.05"/>
+  <!-- Code block header -->
+  <rect x="840" y="80" width="380" height="36" rx="10" fill="#1a1a1a"/>
+  <rect x="840" y="96" width="380" height="20" fill="#1a1a1a"/>
+  <circle cx="864" cy="98" r="5" fill="#FF5F57"/>
+  <circle cx="882" cy="98" r="5" fill="#FFBD2E"/>
+  <circle cx="900" cy="98" r="5" fill="#28C840"/>
+  <text x="1030" y="102" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="11" fill="#ffffff" fill-opacity="0.3" text-anchor="middle" dominant-baseline="middle">component.tsx — AFTER</text>
+
+  <!-- Code lines — After (clean, logic-only) -->
+  <text x="860" y="138" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">{"<div>"}</text>
+  <text x="860" y="155" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">  {"{items.map(item => ("}</text>
+  <text x="860" y="172" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">    {"<Card key={item.id}>"}</text>
+  <text x="860" y="189" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">      {"<h3>{item.name}</h3>"}</text>
+  <text x="860" y="206" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">      {"<p>{item.desc}</p>"}</text>
+  <text x="860" y="223" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">      {"<button onClick={"}</text>
+  <text x="860" y="240" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">        {"() => handle(item)"}</text>
+  <text x="860" y="257" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">      {"}>Go</button>"}</text>
+  <text x="860" y="274" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">    {"</Card>"}</text>
+  <text x="860" y="291" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#A3E635">  {"))}"}</text>
+  <text x="860" y="308" font-family="'SF Mono', 'Monaco', 'Cascadia Code', monospace" font-size="11" fill="#6B7280">{"</div>"}</text>
+
+  <text x="1030" y="340" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="11" fill="#A3E635" fill-opacity="0.8" text-anchor="middle">✓ Logic preserved · UI rebuilt fresh</text>
+
+  <!-- Center hero text -->
+  <text x="640" y="152" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="52" font-weight="700" fill="#FFFFFF" text-anchor="middle" letter-spacing="-1">ui-restructure</text>
+  <text x="640" y="184" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif" font-size="16" fill="#9CA3AF" text-anchor="middle">Redesign your UI from scratch. Keep every line of logic.</text>
+
+  <!-- Tool badges -->
+  <g transform="translate(447, 356)">
+    <rect x="0" y="0" width="80" height="22" rx="5" fill="#1F1F1F" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+    <text x="40" y="15" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Claude Code</text>
+  </g>
+  <g transform="translate(537, 356)">
+    <rect x="0" y="0" width="58" height="22" rx="5" fill="#1F1F1F" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+    <text x="29" y="15" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Cursor</text>
+  </g>
+  <g transform="translate(605, 356)">
+    <rect x="0" y="0" width="70" height="22" rx="5" fill="#1F1F1F" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+    <text x="35" y="15" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Windsurf</text>
+  </g>
+  <g transform="translate(685, 356)">
+    <rect x="0" y="0" width="48" height="22" rx="5" fill="#1F1F1F" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+    <text x="24" y="15" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">Cline</text>
+  </g>
+  <g transform="translate(743, 356)">
+    <rect x="0" y="0" width="90" height="22" rx="5" fill="#1F1F1F" stroke="#ffffff" stroke-opacity="0.08" stroke-width="1"/>
+    <text x="45" y="15" font-family="-apple-system, BlinkMacSystemFont, sans-serif" font-size="10" fill="#9CA3AF" text-anchor="middle">GitHub Copilot</text>
+  </g>
+
+  <!-- Gradient definition -->
+  <defs>
+    <radialGradient id="glow" cx="50%" cy="50%" r="50%">
+      <stop offset="0%" stop-color="#6366F1" stop-opacity="1"/>
+      <stop offset="100%" stop-color="#6366F1" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+</svg>
