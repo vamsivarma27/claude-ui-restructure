@@ -507,9 +507,11 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 
 1. **`@tailwind` directives** — `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` MUST remain exactly as-is. These are Tailwind build directives, not token values. Removing or modifying them will break the entire Tailwind compilation.
 2. **`@media` query blocks** — preserve the `@media (prefers-color-scheme: dark) { ... }` structure. Only update the CSS variable VALUES inside the `:root { }` within those blocks.
-3. **`body { }` and other CSS rules** — preserve all non-variable CSS rules (body font-family, base styles, etc.).
+3. **`body { }` and other standard CSS rules** — preserve all non-variable CSS rules (body font-family, base styles, selector rules, etc.).
 4. **`@layer` directives** — `@layer base { ... }`, `@layer components { ... }`, `@layer utilities { ... }` must be preserved.
 5. **Import statements** — `@import` lines must not be removed.
+6. **`@font-face` blocks** — `@font-face { font-family: ...; src: ...; font-weight: ...; font-display: ...; }` blocks define custom web fonts. NEVER remove or modify them — they are font loading declarations, not CSS variable tokens. Preserve the entire `@font-face` block exactly as-is.
+7. **`@keyframes` blocks** — `@keyframes animName { from { ... } to { ... } }` blocks define animations. NEVER remove or modify them — they are animation definitions, not design tokens. Preserve all `@keyframes` blocks exactly as-is, including all keyframe stops (0%, 25%, `from`, `to`, etc.).
 
 **What changes in globals.css during Step 7:**
 - CSS custom property VALUES inside `:root { }` blocks: clear them (e.g., `--background: ;`)
@@ -525,6 +527,18 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 @tailwind components;     ← PRESERVE exactly
 @tailwind utilities;      ← PRESERVE exactly
 
+@font-face {              ← PRESERVE entire block — never touch
+  font-family: 'CustomFont';
+  src: url('/fonts/CustomFont.woff2') format('woff2');
+  font-weight: 400;
+  font-display: swap;
+}
+
+@keyframes fadeIn {       ← PRESERVE entire block — never touch
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
 :root {
   --background: #ffffff;  ← UPDATE value only
   --primary: #6366f1;     ← UPDATE value only
@@ -538,6 +552,10 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 
 body {                    ← PRESERVE entire rule
   font-family: system-ui;
+}
+
+.animate-fade-in {        ← PRESERVE entire rule — references a keyframe
+  animation: fadeIn 200ms ease-out;
 }
 ```
 

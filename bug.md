@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 10 bugs fixed in same cycle._
+_None — all Cycle 11 bugs fixed in same cycle._
 
 ---
 
@@ -369,6 +369,20 @@ _None — all Cycle 10 bugs fixed in same cycle._
 
 ---
 
+### BUG-029: Step 7 globals.css protection list does not explicitly cover @font-face and @keyframes blocks
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 11 D1 — `/ui-restructure --style minimal` on project with globals.css containing @font-face, @keyframes fadeIn, @keyframes spin, and .animate-fade-in class rule
+- Command: `/ui-restructure --style minimal`
+- Skill File: `SKILL.md`
+- Line: Step 7 (Reset Design Tokens), globals.css Protected Content block
+- Symptom: The Step 7 "globals.css — Protected Content (Non-Negotiable)" block listed 5 protected items: @tailwind directives, @media blocks, body/CSS rules, @layer directives, and @import statements. Item 3 said "body {} and other CSS rules — preserve all non-variable CSS rules." However, `@font-face` and `@keyframes` are CSS @-rules (not standard ruleset blocks) and were NOT explicitly named. A naive or strict implementation could interpret "other CSS rules" as covering only standard selector-based ruleset blocks (`.card { ... }`, `body { ... }`) but NOT at-rules with their own inner block syntax. Without explicit protection, @font-face blocks (custom web font definitions) and @keyframes blocks (animation definitions) could be stripped or corrupted during token reset. Additionally, standard CSS classes that REFERENCE keyframes (e.g., `.animate-fade-in { animation: fadeIn 200ms ease-out; }`) were also not explicitly protected, creating risk for any animation utility class.
+- Root Cause: The globals.css protection list was written focused on Tailwind-specific concerns (@tailwind directives) and CSS variable handling (body rule, @media dark mode). CSS animation infrastructure — @font-face for web fonts and @keyframes for animations — was never explicitly added to the protection list. The broad "other CSS rules" wording is insufficient because @-rules have distinct syntax from standard rulesets and could be missed by a strict implementation.
+- Fix Applied: Added items 6 and 7 to the globals.css Protected Content list in Step 7: (6) `@font-face` blocks — explicitly listed as font loading declarations that must be fully preserved; (7) `@keyframes` blocks — explicitly listed as animation definitions that must be fully preserved including all keyframe stops. Also updated the annotated example to show @font-face, @keyframes fadeIn, and .animate-fade-in all with "PRESERVE entire block" annotations. Changed item 3 wording from "body {} and other CSS rules" to "body {} and other standard CSS rules" for clarity.
+- Commit: see cycle 11 commit
+- Regression Risk: Any Next.js/React project using web fonts via @font-face in globals.css (common with self-hosted fonts for performance) or custom CSS animations via @keyframes (common for loading spinners, fade-ins, shimmer effects). Before the fix, these blocks could be stripped on token reset, breaking web font loading and all CSS animation references.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -383,6 +397,7 @@ _None — all Cycle 10 bugs fixed in same cycle._
 | 8 | 2026-04-21 | 29 | 57 | 9 | 86% | Cycle 8 — server actions, API routes, service layer, useReducer, .d.ts, config files, dynamic CSS Modules — 3 bugs found and fixed (BUG-017: "use server" files no scan exclusion; BUG-018: API route files no scan exclusion; BUG-019: service layer subdirs no scan exclusion) [66 total assertions: 57 pass, 9 fail] |
 | 9 | 2026-04-21 | 30+ | 93 | 0 | 100% | Cycle 9 — deep nesting, src/app/, middleware, useLayoutEffect/forwardRef/memo, cn()/clsx(), ARIA preservation, ref props, multi-export files — 4 bugs found and fixed (BUG-020: scan not recursive + route groups; BUG-021: src/app/ pattern not detected; BUG-022: middleware.ts no exclusion rule; BUG-023: cn()/clsx() wrappers no guidance) [93 total assertions: 93 pass, 0 fail — all bugs fixed in-cycle] |
 | 10 | 2026-04-21 | 35+ | 55 | 8 | 87% | Cycle 10 — attribute preservation, tailwind content array, prisma, storybook, React.lazy, dangerouslySetInnerHTML, env vars — FINAL HARDENING — 3 bugs found and fixed (BUG-024: non-className HTML attributes no explicit protection; BUG-025: tailwind.config content/plugins/safelist unprotected; BUG-027: *.stories.* files not excluded) [63 total assertions: 55 pass, 8 fail — all bugs fixed in-cycle] |
+| 11 | 2026-04-21 | 35+ | 56 | 9 | 86% | Cycle 11 — next/image, next/link, @keyframes/@font-face, next/font, spec consistency audit, --mode full explicit — 1 bug found and fixed (BUG-029: @font-face/@keyframes not explicitly protected in globals.css Step 7); BUG-028 and BUG-030 NOT triggered; F3 minor doc note (instrumentation.ts gap, low severity) [65 total assertions: 56 pass, 9 at-risk-before-fix — all resolved in-cycle] |
 
 ---
 
