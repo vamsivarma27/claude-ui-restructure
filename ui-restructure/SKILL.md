@@ -5,7 +5,7 @@ description: |
 license: MIT
 metadata:
   author: claude-ui-restructure
-  version: "1.2.0"
+  version: "1.3.0"
   category: ui-design
   tags: ui,restructure,redesign,design-system,tailwind,nextjs,react,vue,tokens
 argument-hint: "[--god-mode] [--style apple|linear|minimal|dashboard] [--mode full|layout|theme|grid] [--prompt 'custom UI'] [--keep-tokens] [--remove-tokens] [--grid cards] [--density compact]"
