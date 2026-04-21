@@ -189,7 +189,27 @@ Before processing any file in a scanned directory, check for these exclusion pat
 3. **Type definition files** — not UI files:
    - `*.d.ts` files
 
-Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched.
+4. **Server Action files** — files with `"use server"` directive are pure server logic, no UI:
+   - Files whose first line is `"use server"` (the Next.js Server Action directive)
+   - These files contain only server-side business logic (database calls, `revalidatePath`, form processing)
+   - Detection: if the first non-empty line of a file is `"use server"` — it is a Server Action file. Skip it.
+   - NEVER scan or modify Server Action files — they contain no UI classes and fall under the "server actions" NEVER modify rule.
+   - Note: Server Components (no directive at all) are NOT excluded from scanning — they may have JSX and layout classes that need rebuilding. Only files with `"use server"` as their first directive are excluded.
+
+5. **API Route files** — Next.js App Router API routes are pure server handlers, no UI:
+   - Files named `route.ts` / `route.js` / `route.tsx` / `route.jsx` in any directory
+   - These files export `GET`, `POST`, `PUT`, `DELETE`, `PATCH`, `HEAD`, `OPTIONS` handler functions
+   - Detection: if the filename is `route.ts` (or `route.js` / `route.tsx` / `route.jsx`) — it is an API route file. Skip it.
+   - NEVER scan or modify API route files — they contain no JSX or UI classes and fall under the "route handlers / API routes" NEVER modify rule.
+
+6. **Service layer directories** — non-UI subdirectories inside scanned parent directories:
+   - When scanning `src/` or `app/`, skip files inside these subdirectories: `lib/`, `utils/`, `services/`, `helpers/`, `hooks/` (custom hook files — not UI components), `store/`, `context/`, `config/`, `db/`, `models/`, `types/`
+   - These directories contain business logic, utilities, and data access code — not UI components
+   - Detection: check the file's directory path. If it contains any of these non-UI segment names between the scan root and the file, skip it.
+   - Exception: `hooks/` files that contain JSX (render hooks that return components) — scan these. Pure hook files (no JSX) — skip.
+   - Note: `src/components/` and `app/components/` (explicit components subdirectories) are always scanned regardless of this rule.
+
+Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components.
 
 For each UI file (after exclusions), build a UI model:
 

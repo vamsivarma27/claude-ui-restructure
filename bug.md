@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 7 bugs fixed in same cycle._
+_None — all Cycle 8 bugs fixed in same cycle._
 
 ---
 
@@ -229,6 +229,48 @@ _None — all Cycle 7 bugs fixed in same cycle._
 
 ---
 
+### BUG-017: Step 4 has no exclusion rule for "use server" Server Action files
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 8 B1 — `/ui-restructure --style apple` on Next.js App Router project with `app/actions/createProject.ts` (Server Action)
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section
+- Symptom: Step 4 scans `app/` for App Router projects. Server Action files (e.g., `app/actions/createProject.ts`) begin with `"use server"` and contain only business logic (database calls, `revalidatePath`, form handling) — no JSX, no classNames. The three existing exclusion rules (barrel files, test files, `.d.ts` files) do not cover `"use server"` files: they are not pure re-export barrel files (they have function bodies and `import` statements), not test files, not declaration files. Without an exclusion, the skill scans these files, attempts UI model analysis on them, and could include them in the modified files output — violating the Behavior Rule "NEVER modify: server actions."
+- Root Cause: The exclusion rules in Step 4 were designed to catch the common non-UI patterns (barrel re-exports, tests, type declarations). The `"use server"` directive as a scan-exclusion signal was never added. The Behavior Rules protect content from modification but a scan-level exclusion rule was missing.
+- Fix Applied: Added Rule 4 to Step 4's "File exclusion rules" section: detect files whose first non-empty line is `"use server"` — these are Server Action files; skip them entirely. Added explanation that Server Components (no directive) are NOT excluded (they may have JSX), only files with `"use server"` as their leading directive are excluded.
+- Commit: see cycle 8 commit
+- Regression Risk: Any Next.js App Router project using Server Actions (a core Next.js 13+ feature). The `app/actions/` directory pattern is extremely common. Without this fix, server action files would be picked up by the scan even though they contain zero UI content.
+
+---
+
+### BUG-018: Step 4 has no exclusion rule for API route files (app/api/**/route.ts)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 8 C1 — `/ui-restructure --style linear` on Next.js App Router project with `app/api/projects/route.ts`
+- Command: `/ui-restructure --style linear`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section
+- Symptom: Step 4 scans `app/` for App Router projects. Next.js App Router API routes live at `app/api/**/route.ts` and export `GET`, `POST`, `PUT`, `DELETE` handler functions. These files contain only server-side HTTP logic — no JSX, no classNames. The three existing exclusion rules do not cover `route.ts` files (they are not barrel files, test files, or `.d.ts` files). Without an exclusion, the skill encounters `route.ts` files during the `app/` scan, could add them to the UI model, process them through Steps 5–6, and potentially include them in the "Files modified" output count — violating the Behavior Rule "NEVER modify: Route handlers / API routes."
+- Root Cause: The file exclusion rules in Step 4 addressed naming conventions (barrel, test, .d.ts) but not Next.js App Router's naming convention for API routes (`route.ts`). This is a well-defined Next.js convention where the filename `route.ts` itself signals "API route handler."
+- Fix Applied: Added Rule 5 to Step 4's "File exclusion rules" section: detect files named `route.ts`, `route.js`, `route.tsx`, or `route.jsx` in any directory — these are Next.js App Router API route files; skip them entirely. This is a filename-based exclusion that is unambiguous (no other convention uses this exact filename in App Router projects).
+- Commit: see cycle 8 commit
+- Regression Risk: Any Next.js App Router project with API routes (the standard App Router API pattern). Every `app/api/` directory will contain `route.ts` files. Without this fix, these files would be scanned despite containing no UI content, potentially corrupting the "Files modified" count and output.
+
+---
+
+### BUG-019: Step 4 scans src/ recursively without excluding service layer subdirectories (lib/, utils/, services/)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 8 D1 — `/ui-restructure --style dashboard` on Vite React project with `src/lib/api.ts`, `src/utils/cn.ts`, `src/services/userService.ts`
+- Command: `/ui-restructure --style dashboard`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section
+- Symptom: Step 4 always scans `src/`. When a project has service layer files under `src/lib/`, `src/utils/`, `src/services/`, all of these files are encountered during the recursive `src/` scan. These files contain business logic, API utilities, and helper functions — no JSX, no classNames. The existing exclusion rules don't catch them: `src/lib/api.ts` has function bodies and imports (not a barrel), `src/utils/cn.ts` has `twMerge` logic (not a test or .d.ts file). Without a subdirectory exclusion, all service layer files would be scanned and could be processed through Step 5–6, included in the UI model output, or listed as modified files — violating the Behavior Rule "NEVER modify: Service layer files." Additionally, `src/utils/cn.ts` (a classname utility) contains `clsx` and `twMerge` which could be misidentified as class-related UI code.
+- Root Cause: Step 4's scan target `src/` was defined as a single directory sweep without any subdirectory exclusion list. In a typical React project, `src/` is a mixed directory containing both UI components (`src/components/`) and non-UI code (`src/lib/`, `src/utils/`, `src/services/`, `src/hooks/`). The distinction between UI subdirectories and non-UI subdirectories was never encoded.
+- Fix Applied: Added Rule 6 to Step 4's "File exclusion rules" section: when scanning `src/` or `app/`, skip files inside these known non-UI subdirectory segments: `lib/`, `utils/`, `services/`, `helpers/`, `hooks/` (pure hook files with no JSX), `store/`, `context/`, `config/`, `db/`, `models/`, `types/`. Added exception for `src/components/` and `app/components/` which are always scanned regardless. Added nuance for `hooks/` files: pure hook files (no JSX) are skipped; render hooks that return JSX are scanned.
+- Commit: see cycle 8 commit
+- Regression Risk: Any React/Next.js project using the `src/` convention with service layer code (extremely common). Without this fix, `src/lib/`, `src/utils/`, `src/services/` files would all be swept into the scan on every restructure, wasting processing cycles and risking incorrect output in the files-modified count.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -240,6 +282,7 @@ _None — all Cycle 7 bugs fixed in same cycle._
 | 5 | 2026-04-21 | 19 | 19 | 0 | 100% | Cycle 5 — regression sweep + new combinations — 4 regressions all pass, 10 personas all pass, 5 new combos: 1 doc bug (BUG-009: --prompt + --god-mode undocumented) found and fixed |
 | 6 | 2026-04-21 | 20 | 50 | 13 | 79% | Cycle 6 — RSC, plain CSS, cross-imports, mixed styling, God Mode phases — 2 bugs found and fixed (BUG-010: RSC Server/Client Component distinction missing; BUG-011: plain CSS class-value rebuild guidance missing) [63 total assertions: 50 pass, 13 fail] |
 | 7 | 2026-04-21 | 26 | 53 | 8 | 87% | Cycle 7 — regressions, output format, layouts/, Framer Motion, barrel files, globals.css, shadcn variants — 4 bugs found and fixed (BUG-013: Framer Motion no detection/guidance; BUG-014: barrel files not excluded; BUG-015: test files not excluded; BUG-016: @tailwind directives unprotected in globals.css) [61 total assertions: 53 pass, 8 fail] |
+| 8 | 2026-04-21 | 29 | 57 | 9 | 86% | Cycle 8 — server actions, API routes, service layer, useReducer, .d.ts, config files, dynamic CSS Modules — 3 bugs found and fixed (BUG-017: "use server" files no scan exclusion; BUG-018: API route files no scan exclusion; BUG-019: service layer subdirs no scan exclusion) [66 total assertions: 57 pass, 9 fail] |
 
 ---
 
