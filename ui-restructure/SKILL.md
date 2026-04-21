@@ -230,7 +230,13 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - Detection: if the filename is `middleware.ts` (or `middleware.js` / `middleware.tsx` / `middleware.jsx`) — it is a middleware file. Skip it.
    - NEVER scan or modify middleware files — they contain no JSX or UI classes. This applies to `middleware.ts` at the project root AND `src/middleware.ts` inside the `src/` scan directory.
 
-Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (2b) Storybook story files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components, (7) middleware files being scanned despite containing no UI.
+8. **Instrumentation files** — Next.js instrumentation hooks for observability (OpenTelemetry, Sentry, Datadog); contains no JSX:
+   - Files named `instrumentation.ts` / `instrumentation.js` / `instrumentation.node.ts` / `instrumentation.node.js` in any directory
+   - These files export a `register()` function that initializes monitoring/tracing — pure server-side setup, no UI classes
+   - Detection: if the filename is `instrumentation.ts`, `instrumentation.js`, `instrumentation.node.ts`, or `instrumentation.node.js` — it is an instrumentation file. Skip it.
+   - NEVER scan or modify instrumentation files — they contain no JSX or UI classes. This applies to root-level `instrumentation.ts` AND `src/instrumentation.ts` inside the `src/` scan directory.
+
+Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (2b) Storybook story files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components, (7) middleware files being scanned despite containing no UI, (8) instrumentation files being scanned despite containing no UI.
 
 For each UI file (after exclusions), build a UI model:
 
@@ -508,7 +514,7 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 1. **`@tailwind` directives** — `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` MUST remain exactly as-is. These are Tailwind build directives, not token values. Removing or modifying them will break the entire Tailwind compilation.
 2. **`@media` query blocks** — preserve the `@media (prefers-color-scheme: dark) { ... }` structure. Only update the CSS variable VALUES inside the `:root { }` within those blocks.
 3. **`body { }` and other standard CSS rules** — preserve all non-variable CSS rules (body font-family, base styles, selector rules, etc.).
-4. **`@layer` directives** — `@layer base { ... }`, `@layer components { ... }`, `@layer utilities { ... }` must be preserved.
+4. **`@layer` wrapper structure** — Preserve the `@layer base { }`, `@layer components { }`, and `@layer utilities { }` keyword and block wrapper. **Important: the `@layer` WRAPPER is protected, but `@apply` rules inside `@layer components { }` blocks are NOT fully protected.** If a `@layer components { }` block contains custom class definitions using `@apply` with hardcoded Tailwind layout/color/spacing/radius class names (e.g., `.btn { @apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md; }`), those `@apply` class values must be rebuilt in Step 10 — the same way as `className` values in JSX. Preserve: the selector name (`.btn`, `.card`), the `@apply` keyword itself, and any CSS variable references inside `@apply` (e.g., `@apply bg-[--color-primary]` — the variable value is already updated in `:root { }`). Fully preserve `@layer base {}` HTML element reset rules (e.g., `*, ::before, ::after { box-sizing: border-box; }`) as-is.
 5. **Import statements** — `@import` lines must not be removed.
 6. **`@font-face` blocks** — `@font-face { font-family: ...; src: ...; font-weight: ...; font-display: ...; }` blocks define custom web fonts. NEVER remove or modify them — they are font loading declarations, not CSS variable tokens. Preserve the entire `@font-face` block exactly as-is.
 7. **`@keyframes` blocks** — `@keyframes animName { from { ... } to { ... } }` blocks define animations. NEVER remove or modify them — they are animation definitions, not design tokens. Preserve all `@keyframes` blocks exactly as-is, including all keyframe stops (0%, 25%, `from`, `to`, etc.).
@@ -519,6 +525,7 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 **What changes in globals.css during Step 10 (rebuild):**
 - CSS custom property VALUES inside `:root { }` blocks: set to new style engine values
 - CSS custom property VALUES inside `@media (prefers-color-scheme: dark) { :root { } }`: set to engine dark mode values
+- `@apply` class values inside `@layer components { }` custom class definitions: update with style engine values (preserve selector names and `@apply` keyword)
 
 **Example — correct globals.css handling:**
 ```css
@@ -658,6 +665,28 @@ If Step 3 detected plain CSS imports (`import './styles/card.css'` or similar), 
 - NEVER change the CSS file structure (selector order, rule grouping)
 - ONLY update property values (colors, padding, border-radius, font-size, font-weight, etc.) to match the style engine
 - `import './styles/*.css'` statements in JSX/TSX are preserved unchanged (Step 6 rule)
+
+**`@apply` in `@layer components {}` rebuild (when globals.css has `@layer components` blocks):**
+
+If `globals.css` contains `@layer components { }` blocks with custom class definitions that use `@apply` with hardcoded Tailwind class names, update those `@apply` values in this step with style engine values.
+
+- **Preserve:** the `@layer components { }` wrapper, selector names (`.btn`, `.card`), the `@apply` keyword, and any CSS custom property references (e.g., `@apply bg-[--color-primary]` — variable value already set via `:root { }`)
+- **Update:** the Tailwind utility class values after `@apply` — apply engine layout, spacing, color, and radius values
+- **Do NOT update** `@layer base {}` HTML element reset rules (e.g., `*, ::before, ::after { box-sizing: border-box; }`)
+
+```css
+/* Before (original @apply classes) */
+@layer components {
+  .btn-primary { @apply flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md font-medium; }
+  .card        { @apply rounded-xl border border-gray-200 bg-white shadow-sm p-6; }
+}
+
+/* After (apple engine @apply values applied) */
+@layer components {
+  .btn-primary { @apply flex items-center gap-3 px-5 py-2.5 bg-blue-500/90 text-white rounded-xl font-medium backdrop-blur-sm; }
+  .card        { @apply rounded-2xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-md p-6; }
+}
+```
 
 For each file modified, show a brief diff summary.
 

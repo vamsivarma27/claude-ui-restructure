@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 11 bugs fixed in same cycle._
+_None — all Cycle 13 bugs fixed in same cycle._
 
 ---
 
@@ -397,6 +397,34 @@ _None — all Cycle 11 bugs fixed in same cycle._
 
 ---
 
+### BUG-033: Step 7 `@layer` protection too broad — `@apply` inside `@layer components {}` not rebuilt with engine values
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 13 B1 — `@apply in @layer components` probe
+- Command: `/ui-restructure --style apple` on Next.js App Router project with globals.css containing `@layer components { .btn-primary { @apply flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md; } }`
+- Skill File: `SKILL.md`
+- Line: Step 7 globals.css Protected Content Item 4; Step 10 rebuild section
+- Symptom: Step 7 Item 4 said "`@layer base/components/utilities` must be preserved." This over-protected the contents of `@layer components {}` blocks — any custom class definitions using `@apply` with hardcoded Tailwind layout/color class names were left completely unchanged during token reset and rebuild. After restructure: `:root { }` CSS variables updated correctly to apple values, but `.btn-primary { @apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md; }` retained the old pre-apple Tailwind classes. The restructured project therefore applied engine styles to JSX classNames but not to `@layer components` `@apply` definitions — producing a visually inconsistent output where component-class-based buttons looked nothing like the rebuilt JSX-class-based components.
+- Root Cause: The `@layer` protection was written to prevent the `@layer` DIRECTIVE WRAPPER from being removed (e.g., accidentally deleting `@tailwind utilities;` or `@layer base { }` base reset rules). But "must be preserved" was written too broadly — it protected the entire block CONTENTS including `@apply` rules. `@apply` values inside `@layer components {}` are design-system token definitions, the same category as `className` values in JSX — they MUST be rebuilt with engine values when tokens are reset.
+- Fix Applied: (1) Updated Step 7 globals.css Protected Content Item 4 to distinguish between the `@layer` wrapper (always preserved) and `@apply` values inside `@layer components {}` (rebuilt in Step 10 — same as className values). Added explicit rule: preserve selector names and the `@apply` keyword; update the Tailwind class values. Exception: `@layer base {}` HTML element reset rules preserved fully. CSS variable `@apply` references (e.g., `@apply bg-[--color-primary]`) do not need updating. (2) Added `@apply in @layer components {} rebuild` subsection to Step 10 with before/after example. (3) Updated restructure-flow.md Phase 3 Item 4 and Phase 4 token targets to match.
+- Commit: see cycle 13 commit
+- Regression Risk: Any project using `@layer components { }` blocks in globals.css with hardcoded Tailwind class names (common in projects following Tailwind's official "Extracting Components" pattern). Before the fix, these projects would get JSX-level visual changes but component-class definitions would remain at old values — producing an inconsistent partially-redesigned output.
+
+---
+
+### BUG-034: Step 4 has no exclusion rule for `instrumentation.ts` / `instrumentation.node.ts` files
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 13 B2 — `instrumentation.ts` scan exclusion probe
+- Command: `/ui-restructure --style minimal` on Next.js App Router project with `src/instrumentation.ts`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section (after Rule 7)
+- Symptom: `src/instrumentation.ts` (Next.js 14+ observability setup — exports `register()` function for OpenTelemetry / Sentry / Datadog initialization) lives directly in `src/`. Step 4 always scans `src/` recursively. The seven existing exclusion rules do not match `instrumentation.ts`: it is not a barrel file (has a function body), not a test file, not a storybook file, not a `.d.ts`, does not start with `"use server"`, is not named `route.ts`, is not inside `lib/`/`utils/`/`services/` subdirectories, and is not named `middleware.ts`. The file would be scanned on every restructure. While it has no JSX or className (so the strip/rebuild passes would not modify it), the scan is unnecessary and creates a risk that a liberal implementation adds the file to "Files modified" output or attempts to "improve" the observability setup code — violating Behavior Rules.
+- Root Cause: The filename-based exclusion rules covered barrel/test/storybook/type-declaration/server-action/route/middleware patterns, but not the `instrumentation.ts` / `instrumentation.node.ts` naming convention (a Next.js 14+ convention for the `register()` hook used by OpenTelemetry integrations). This gap was first noted in the Cycle 11 audit (F3 minor note) but carried forward to Cycle 13 for a definitive fix.
+- Fix Applied: Added Rule 8 to Step 4's "File exclusion rules" section: detect files named `instrumentation.ts`, `instrumentation.js`, `instrumentation.node.ts`, or `instrumentation.node.js` in any directory — skip them entirely. Applies to root-level and `src/instrumentation.ts`. Updated the exclusion summary to include "(8) instrumentation files being scanned despite containing no UI." Also updated `restructure-flow.md` Phase 1B exclusion rules with the same Rule 8.
+- Commit: see cycle 13 commit
+- Regression Risk: Any Next.js 14+ project with `src/instrumentation.ts` (the standard location for OpenTelemetry / Sentry Next.js SDK integration). Root-level `instrumentation.ts` is not inside any scan directory so was already safe, but `src/instrumentation.ts` was unprotected.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -413,6 +441,7 @@ _None — all Cycle 11 bugs fixed in same cycle._
 | 10 | 2026-04-21 | 35+ | 55 | 8 | 87% | Cycle 10 — attribute preservation, tailwind content array, prisma, storybook, React.lazy, dangerouslySetInnerHTML, env vars — FINAL HARDENING — 3 bugs found and fixed (BUG-024: non-className HTML attributes no explicit protection; BUG-025: tailwind.config content/plugins/safelist unprotected; BUG-027: *.stories.* files not excluded) [63 total assertions: 55 pass, 8 fail — all bugs fixed in-cycle] |
 | 11 | 2026-04-21 | 35+ | 56 | 9 | 86% | Cycle 11 — next/image, next/link, @keyframes/@font-face, next/font, spec consistency audit, --mode full explicit — 1 bug found and fixed (BUG-029: @font-face/@keyframes not explicitly protected in globals.css Step 7); BUG-028 and BUG-030 NOT triggered; F3 minor doc note (instrumentation.ts gap, low severity) [65 total assertions: 56 pass, 9 at-risk-before-fix — all resolved in-cycle] |
 | 12 | 2026-04-21 | 35+ | 62 | 0 | 100% | Cycle 12 — restructure-flow.md sync (BUG-031), class components, import type, spread props, Fragment, SSR guard, async RSC — 1 bug fixed (BUG-031: restructure-flow.md critically out of sync — Vue scoped contradiction + 11 missing protections); all Parts B–G assertions passed [62 total assertions: 62 pass, 0 fail — all resolved in-cycle] |
+| 13 | 2026-04-21 | 12 | 116 | 4 | 97% | Cycle 13 — full regression suite (10/10 pass, 100%) + new probes (2 bugs found and fixed): BUG-033 (@apply in @layer components not rebuilt — @layer protection too broad), BUG-034 (instrumentation.ts no scan exclusion rule). restructure-flow.md updated in sync. [120 total: 110 Part-A pass + 4/6 B1 pass + 2/2 B2 pass = 116 pass, 4 fail before fix → 0 fail after fix] |
 
 ---
 

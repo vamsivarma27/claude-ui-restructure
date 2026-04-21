@@ -145,7 +145,13 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - Detection: if the filename is `middleware.ts` (or variants) — skip it.
    - Applies to root-level `middleware.ts` AND `src/middleware.ts`.
 
-Applying these exclusions prevents: (1) barrel files from being accidentally modified, (2) test files from being treated as UI components, (2b) Storybook story files from being treated as UI components, (3) TypeScript declarations from being touched, (4) Server Action files from being scanned, (5) API route files from being scanned, (6) service layer utility files from being scanned, (7) middleware files from being scanned.
+8. **Instrumentation files** — Next.js observability hooks (OpenTelemetry, Sentry, Datadog); no JSX:
+   - Files named `instrumentation.ts` / `instrumentation.js` / `instrumentation.node.ts` / `instrumentation.node.js` in any directory
+   - These export a `register()` function — pure server-side monitoring setup, no UI classes.
+   - Detection: if the filename is `instrumentation.ts`, `instrumentation.js`, `instrumentation.node.ts`, or `instrumentation.node.js` — skip it.
+   - Applies to root-level `instrumentation.ts` AND `src/instrumentation.ts`.
+
+Applying these exclusions prevents: (1) barrel files from being accidentally modified, (2) test files from being treated as UI components, (2b) Storybook story files from being treated as UI components, (3) TypeScript declarations from being touched, (4) Server Action files from being scanned, (5) API route files from being scanned, (6) service layer utility files from being scanned, (7) middleware files from being scanned, (8) instrumentation files from being scanned.
 
 Categorize files after exclusions:
 
@@ -317,7 +323,7 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 1. **`@tailwind` directives** — `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` MUST remain exactly as-is.
 2. **`@media` query blocks** — preserve the `@media (prefers-color-scheme: dark) { ... }` structure. Only update CSS variable VALUES inside `:root { }` within those blocks.
 3. **`body { }` and other standard CSS rules** — preserve all non-variable CSS rules.
-4. **`@layer` directives** — `@layer base { ... }`, `@layer components { ... }`, `@layer utilities { ... }` must be preserved.
+4. **`@layer` wrapper structure** — Preserve the `@layer base { }`, `@layer components { }`, and `@layer utilities { }` keyword and block wrapper. **Important: the `@layer` WRAPPER is protected, but `@apply` rules inside `@layer components { }` blocks are NOT fully protected.** If a `@layer components { }` block contains custom class definitions using `@apply` with hardcoded Tailwind layout/color/spacing/radius class names (e.g., `.btn { @apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md; }`), those `@apply` class values must be rebuilt in Phase 5 — the same way as `className` values in JSX. Preserve: the selector name, the `@apply` keyword, and any CSS variable references inside `@apply`. Fully preserve `@layer base {}` HTML element reset rules as-is.
 5. **Import statements** — `@import` lines must not be removed.
 6. **`@font-face` blocks** — `@font-face { font-family: ...; src: ...; font-weight: ...; font-display: ...; }` blocks define custom web fonts. **NEVER remove or modify them** — they are font loading declarations, not CSS variable tokens.
 7. **`@keyframes` blocks** — `@keyframes animName { from { ... } to { ... } }` blocks define animations. **NEVER remove or modify them** — they are animation definitions, not design tokens. Preserve ALL keyframe stops (0%, 25%, `from`, `to`, etc.).
@@ -326,8 +332,11 @@ When resetting CSS variables in `globals.css`, ONLY update the CSS custom proper
 Preserve:
 - tailwind.config.ts: content array, plugins list, safelist, darkMode setting, presets, imports
 - globals.css: @tailwind directives, @font-face blocks, @keyframes blocks,
-               base/components/utilities layers, @media query structures, body {} rules,
+               @layer wrapper structure, @media query structures, body {} rules,
                CSS selector rules that reference animations (e.g., .animate-fade-in { ... })
+Update in Phase 5:
+- globals.css: @apply class values inside @layer components {} custom class definitions
+               (selector names and @apply keyword preserved; class values rebuilt with engine)
 ```
 
 ---
@@ -350,6 +359,8 @@ Apply to:
 ```
 tailwind.config.ts → theme.extend (colors, borderRadius, boxShadow, fontFamily, spacing)
 globals.css → :root { } CSS variables (VALUES only — structure preserved from Phase 3)
+globals.css → @apply values inside @layer components {} custom class definitions
+              (selector names + @apply keyword preserved; class values rebuilt with engine)
 tokens.ts (if exists) → export const tokens = { ... }
 theme.ts / design-system.ts (if exist alongside tailwind.config.ts) → update in sync
 ```
