@@ -267,6 +267,10 @@ Before touching any file, scan every UI component and mark:
 const [items, setItems] = useState(...)
 const { data } = useSWR(...)
 useEffect(() => { fetchData() }, [])
+const memoized = useMemo(() => compute(data), [data])
+const fn = useCallback((id) => handler(id), [handler])
+const ref = useRef(null)
+const value = useContext(MyContext)
 
 // Handlers
 const handleSubmit = async () => { ... }
@@ -681,11 +685,30 @@ If Step 3 detected plain CSS imports (`import './styles/card.css'` or similar), 
 :root { --color-primary: #171717; --color-bg: #FFFFFF; --radius-md: 6px; }
 ```
 
+**`@apply` directives in CSS files (when CSS files use Tailwind's `@apply`):**
+
+When a CSS file contains `@apply` directives inside class rules (e.g., `.btn { @apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md; }`), update the Tailwind class values after `@apply` with style engine values — the same way as `className` values in JSX. This applies to any CSS file: standalone component CSS files (`button.css`, `card.css`) and non-globals CSS files.
+
+- **Preserve:** the CSS selector name (`.btn`, `.card-primary`), the `@apply` keyword, and any non-Tailwind CSS properties in the same rule
+- **Update:** the Tailwind utility class values after `@apply` — apply engine layout, spacing, color, radius values
+- **Do NOT update** CSS custom property references in `@apply` (e.g., `@apply bg-[--color-primary]`) — the variable value is already updated in `:root { }`
+
+```css
+/* Before (original @apply in standalone CSS file) */
+.btn-primary { @apply flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md font-medium; }
+.card-base   { @apply rounded-xl border border-gray-200 bg-white shadow-sm p-6; }
+
+/* After (apple engine @apply values applied) */
+.btn-primary { @apply flex items-center gap-3 px-5 py-2.5 bg-blue-500/90 text-white rounded-xl font-medium backdrop-blur-sm; }
+.card-base   { @apply rounded-2xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-md p-6; }
+```
+
 **Rules:**
 - NEVER rename CSS class selectors
 - NEVER remove CSS rules or properties
 - NEVER change the CSS file structure (selector order, rule grouping)
 - ONLY update property values (colors, padding, border-radius, font-size, font-weight, etc.) to match the style engine
+- Update `@apply` Tailwind class values with engine values (same rule — only the class values after `@apply` change)
 - `import './styles/*.css'` statements in JSX/TSX are preserved unchanged (Step 6 rule)
 
 **`@apply` in `@layer components {}` rebuild (when globals.css has `@layer components` blocks):**

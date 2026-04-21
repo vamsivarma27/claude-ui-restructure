@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 15 bugs fixed in same cycle._
+_None — all Cycle 16 bugs fixed in same cycle._
 
 ---
 
@@ -453,6 +453,20 @@ _None — all Cycle 15 bugs fixed in same cycle._
 
 ---
 
+### BUG-037: Step 10 Plain CSS rebuild has no guidance for `@apply` directives in standalone CSS files
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 16 B1 — `@apply` in standalone CSS file probe (`src/styles/button.css`)
+- Command: `/ui-restructure --style apple` on Next.js App Router + Tailwind project with `src/styles/button.css` containing `.btn-primary { @apply flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md; }`
+- Skill File: `SKILL.md`
+- Line: Step 10 (Rebuild UI), Plain CSS rebuild section
+- Symptom: Step 10 "Plain CSS rebuild" documents updating "property VALUES inside each rule block" — with examples showing standard CSS properties (padding: 16px; background: #fff; border-radius: 8px). `@apply` is a Tailwind preprocessor directive (`@apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md`), NOT a standard CSS property-value pair. The Step 10 guidance for plain CSS only addressed standard CSS properties, not `@apply` directives. After restructure: JSX classNames updated to apple values, globals.css `:root{}` variables updated, `@layer components{}` @apply rebuilt (BUG-033 fix) — but `src/styles/button.css` `.btn-primary { @apply ... }` left with old pre-apple Tailwind class values. Components using `className="btn-primary"` would visually remain in old style.
+- Root Cause: The BUG-033 fix addressed `@apply` in `globals.css @layer components {}` blocks specifically. Standalone CSS files using `@apply` (a common Tailwind pattern for component CSS extraction, e.g., `.btn { @apply flex gap-2 bg-blue-500 rounded-md; }`) were not covered in the Step 10 plain CSS rebuild guidance. The "update property VALUES" instruction only applies to standard CSS properties, not Tailwind's `@apply` directive.
+- Fix Applied: Added `@apply` guidance to Step 10 Plain CSS rebuild section (before the Rules block): when any CSS file contains `@apply` directives inside class rules, update the Tailwind class values after `@apply` with style engine values — the same way as `className` in JSX. Preserve: selector names, `@apply` keyword, non-Tailwind CSS properties, CSS custom property references in `@apply`. Updated the Rules block to include the `@apply` update rule. Also updated restructure-flow.md Phase 4 token targets and Phase 5 rebuild section with equivalent guidance. Also added `useCallback`, `useMemo`, `useRef`, `useContext` as explicit items to the Phase 1C logic audit checklist and Step 5 PRESERVE list (previously only covered implicitly by "custom hooks").
+- Commit: see cycle 16 commit
+- Regression Risk: Any project using Tailwind's `@apply` in standalone CSS component files (a documented Tailwind pattern for extracting component classes). Common in projects that prefer CSS files over JSX utility classes for component styling, or transitioning from CSS-based to utility-based styling. Before the fix, these files would have their @apply class values left unchanged after restructure, producing visually inconsistent output (JSX updated but CSS file styles unchanged).
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -472,6 +486,7 @@ _None — all Cycle 15 bugs fixed in same cycle._
 | 13 | 2026-04-21 | 12 | 116 | 4 | 97% | Cycle 13 — full regression suite (10/10 pass, 100%) + new probes (2 bugs found and fixed): BUG-033 (@apply in @layer components not rebuilt — @layer protection too broad), BUG-034 (instrumentation.ts no scan exclusion rule). restructure-flow.md updated in sync. [120 total: 110 Part-A pass + 4/6 B1 pass + 2/2 B2 pass = 116 pass, 4 fail before fix → 0 fail after fix] |
 | 14 | 2026-04-21 | 13 | 122 | 3 | 98% | Cycle 14 — full regression suite (10/10 pass, 100%) + new probes (1 high-severity bug found and fixed): BUG-035 (cva() variant definitions in shadcn/ui components not rebuilt — module-level class strings invisible to strip/rebuild pass). Also added twMerge() explicit protection note. Probe B2 (next/font className) PASSED with no changes needed. [125 total: 112 Part-A + 7/10 B1 before fix + 4/4 B2 + 2/2 B3 = 122 pass before fix → 125 after fix] |
 | 15 | 2026-04-21 | 13 | 118 | 6 | 95% | Cycle 15 — full regression suite (10/10 pass, 100%) + new probes: BUG-036 (context/ excluded entirely — ThemeProvider/LayoutProvider JSX not scanned). Also added globals.css path resolution note for src/ convention and Tailwind v4 @import coverage confirmed (PASS). [124 total: 112 Part-A + 0/6 B1 before fix + 4/4 B2 + 2/2 B3 = 118 pass before fix → 124 after fix] |
+| 16 | 2026-04-21 | 14 | 124 | 3 | 98% | Cycle 16 — full regression suite (10/10 pass, 100%) + new probes: BUG-037 (@apply in standalone CSS files not rebuilt — Plain CSS rebuild guidance covered standard CSS properties but not @apply directive). Added useCallback/useMemo/useRef/useContext to explicit PRESERVE list. Probes B2–B4 (useCallback, providers.tsx, compound components) all PASSED. [127 total: 112 Part-A + 3/6 B1 before fix + 3/3 B2 + 4/4 B3+B4 = 124 pass → 127 after fix] |
 
 ---
 

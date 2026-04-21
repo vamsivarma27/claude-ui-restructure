@@ -186,7 +186,11 @@ Before stripping, identify in each file:
 Logic to preserve:
   □ useState / useReducer calls
   □ useEffect calls
-  □ Custom hook calls
+  □ useCallback calls (memoized event handlers)
+  □ useMemo calls (memoized computed values)
+  □ useRef calls (DOM refs and mutable values)
+  □ useContext calls (context consumption)
+  □ Custom hook calls (all use* functions not listed above)
   □ API calls (fetch, axios, SWR, React Query)
   □ Server actions (Next.js)
   □ Event handler functions
@@ -372,6 +376,7 @@ globals.css → @apply values inside @layer components {} custom class definitio
               (selector names + @apply keyword preserved; class values rebuilt with engine)
 tokens.ts (if exists) → export const tokens = { ... }
 theme.ts / design-system.ts (if exist alongside tailwind.config.ts) → update in sync
+standalone CSS files with @apply (e.g., src/styles/button.css) → update @apply class values
 ```
 
 ---
@@ -423,6 +428,19 @@ For any file flagged as having `import { cva } from "class-variance-authority"` 
 - **Preserve:** `import { cva, type VariantProps } from "class-variance-authority"` — never remove
 
 The JSX `className={cn(buttonVariants({ variant, size }), className)}` does NOT need separate changes — it references the now-rebuilt `cva()` definition automatically.
+
+**`@apply` directives in standalone CSS files:**
+
+For any CSS file (not globals.css) that uses `@apply` directives inside class rules, update the Tailwind class values after `@apply` with style engine values:
+
+- **Preserve:** CSS selector names (`.btn-primary`, `.card-base`), the `@apply` keyword, any non-Tailwind CSS properties in the same rule
+- **Update:** the Tailwind utility class values after `@apply` — apply engine layout, spacing, color, radius values
+- **Do NOT update** CSS custom property references in `@apply` (e.g., `@apply bg-[--color-primary]`)
+
+```css
+/* Before */ .btn-primary { @apply flex gap-2 px-4 py-2 bg-blue-500 text-white rounded-md; }
+/* After  */ .btn-primary { @apply flex gap-3 px-5 py-2.5 bg-blue-500/90 text-white rounded-xl backdrop-blur-sm; }
+```
 
 ---
 
