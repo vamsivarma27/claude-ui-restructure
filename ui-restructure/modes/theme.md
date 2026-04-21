@@ -67,8 +67,9 @@ Use `--mode theme` when:
 1. Open `tailwind.config.ts`
 2. Clear `theme.extend.colors`, `theme.extend.fontFamily`, `theme.extend.spacing`, `theme.extend.borderRadius`, `theme.extend.boxShadow`
 3. Replace with style engine token values
-4. Scan all component files for hardcoded color classes (e.g., `text-gray-600`, `bg-white`, `border-gray-200`)
-5. Replace with new semantic token classes
+4. **If a separate `tokens.ts` / `theme.ts` / `design-system.ts` also exists alongside `tailwind.config.ts`:** update that file too — replace its color, spacing, radius, and shadow values with the style engine values. Both files must stay in sync. Do NOT skip token files just because `tailwind.config.ts` was already updated.
+5. Scan all component files for hardcoded color classes (e.g., `text-gray-600`, `bg-white`, `border-gray-200`)
+6. Replace with new semantic token classes
 
 ### For CSS variable projects:
 

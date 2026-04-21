@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 2 bugs fixed in same cycle._
+_None — all Cycle 3 bugs fixed in same cycle._
 
 ---
 
@@ -61,12 +61,27 @@ _None — all Cycle 2 bugs fixed in same cycle._
 
 ---
 
+### BUG-004: modes/theme.md Token Replacement Strategy for Tailwind does not cover dual token files (tailwind.config.ts + tokens.ts coexisting)
+- Status: [FIXED 2026-04-21]
+- Persona: Probe P2 — dual token files with --mode theme --style apple
+- Command: `/ui-restructure --mode theme --style apple`
+- Skill File: `modes/theme.md`
+- Line: Line 65 (Token Replacement Strategy → For Tailwind projects section)
+- Symptom: When a project has BOTH `tailwind.config.ts` AND a separate `tokens.ts` file, the theme.md "For Tailwind projects" strategy only instructs updating `tailwind.config.ts`. A strict reading leaves `tokens.ts` untouched, causing the two files to fall out of sync — `tailwind.config.ts` gets Apple token values but `tokens.ts` retains the old values.
+- Root Cause: The Token Replacement Strategy section was written assuming a Tailwind project only has `tailwind.config.ts` as its token source. The Scope table correctly lists `tokens.ts / theme.ts` as "Reset + rebuilt", but the procedural steps (the how-to) didn't mention the dual-file case.
+- Fix Applied: Added step 4 to the "For Tailwind projects" strategy: explicitly instructs that if a separate `tokens.ts` / `theme.ts` / `design-system.ts` exists alongside `tailwind.config.ts`, that file must ALSO be updated with style engine values. Both files must stay in sync.
+- Commit: see cycle 3 commit
+- Regression Risk: Any project that uses both a Tailwind config AND a separate tokens file (a common pattern in design-system-aware Next.js apps).
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
 |-------|------|-------------|------|------|-----------|-------|
 | 1 | 2026-04-21 | 10 | 10 | 0 | 100% | Cycle 1 — all personas passed, 0 bugs found |
 | 2 | 2026-04-21 | 10 | 8 | 2 | 83% | Cycle 2 — adversarial — 3 bugs found and fixed (BUG-001, BUG-002, BUG-003) |
+| 3 | 2026-04-21 | 15 | 14 | 1 | 97% | Cycle 3 — regression + probes — regressions all passed, 1 new bug (BUG-004) found and fixed |
 
 ---
 
