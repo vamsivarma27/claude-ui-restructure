@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 8 bugs fixed in same cycle._
+_None — all Cycle 9 bugs fixed in same cycle._
 
 ---
 
@@ -271,6 +271,62 @@ _None — all Cycle 8 bugs fixed in same cycle._
 
 ---
 
+### BUG-020: Step 4 scan is not declared recursive; deeply-nested components and route group directories missed
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 9 B1 — `/ui-restructure --style apple` on Next.js App Router project with deeply nested components at depth 4–5 and route group paths
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), directory scan instructions
+- Symptom: Step 4 lists directories to scan (`components/`, `src/`, `layouts/`, `app/`) but never states that scanning is recursive. A naive implementation scanning only the top level of each directory would miss files like `app/dashboard/analytics/components/ReportCard.tsx` (depth 4) and `app/dashboard/analytics/components/charts/LineChart.tsx` (depth 5). Additionally, Next.js App Router route group directories use parenthesized names like `(auth)/` — e.g., `app/(auth)/login/components/LoginForm.tsx`. Without explicit guidance, a scanner might skip `(auth)/` directories entirely or fail to handle the parenthesis naming convention. Both omissions mean deeply nested real-world components would not be restructured.
+- Root Cause: Step 4's directory scan instruction was written as a flat list of top-level directories. No explicit statement said "scan recursively" or addressed the Next.js route group `(groupName)/` directory naming convention.
+- Fix Applied: (1) Added "recursively — all nested subdirectories included" to the scan headers for both "always scan" and "conditionally scan" blocks. (2) Added an explicit "Scanning is always recursive" paragraph with a depth 4/5 example. (3) Added a "Route group directories" paragraph explaining that `(auth)/`, `(marketing)/` etc. are real directories containing files that must be scanned — treat them as regular directories during recursive scanning, with a concrete path example.
+- Commit: see cycle 9 commit
+- Regression Risk: Any Next.js App Router project with deeply nested component trees or route groups (extremely common in real Next.js apps). Before the fix, only top-level files in the scan directories would be caught by the skill, leaving all nested components unmodified.
+
+---
+
+### BUG-021: Step 2 framework detection does not handle `src/app/layout.tsx` (App Router inside src/)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 9 C1 — `/ui-restructure --style linear` on Next.js project with `src/app/layout.tsx` instead of `app/layout.tsx` at root
+- Command: `/ui-restructure --style linear`
+- Skill File: `SKILL.md`
+- Line: Step 2 (Detect Framework), detection table
+- Symptom: Step 2's detection table maps `app/ directory + layout.tsx` → Next.js App Router. This only checks for `app/` at the project root. Many Next.js projects use the `src/` layout convention where the App Router directory is at `src/app/layout.tsx` — not `app/layout.tsx`. For such projects, Step 2 would find no `app/` at root and fall through to "React (Vite)" or "unknown" — incorrectly detecting the framework. Without correct framework detection, Step 4 would not scan `src/app/` as an App Router directory, and the Server vs. Client Component rules (and all App Router-specific behavior) would not apply.
+- Root Cause: The Step 2 detection table was written assuming Next.js always places `app/` at the project root. The `src/app/` convention is officially supported by Next.js 13+ and is widely used, but was never added as a detection signal.
+- Fix Applied: (1) Added `src/app/` directory + `layout.tsx` inside `src/app/` as a second row in the detection table, labeled "Next.js App Router (src/ layout convention)". (2) Added a dedicated paragraph explaining the `src/app/` pattern and its scan implications: when detected, Step 4 should use `src/app/` as the App Router scan root instead of `app/`. (3) Added a conflict-resolution rule for `src/app/` + `pages/` coexistence (App Router wins). Updated scan header note to check both project root and `src/` for framework signals.
+- Commit: see cycle 9 commit
+- Regression Risk: All Next.js projects using the `src/` layout convention (extremely common — the Next.js docs show both root `app/` and `src/app/` as equivalent, and many create-next-app scaffolds default to `src/`). Before the fix, these projects would be misidentified as React (Vite) or unknown.
+
+---
+
+### BUG-022: Step 4 has no exclusion rule for `middleware.ts` files
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 9 D1 — `/ui-restructure --style dashboard` on Next.js project with `src/middleware.ts`
+- Command: `/ui-restructure --style dashboard`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section
+- Symptom: `middleware.ts` (Next.js middleware) intercepts requests before they reach the app. It contains routing/auth logic, no JSX, no className. While `middleware.ts` at the project root is not directly in any scanned directory and is thus safe, `src/middleware.ts` IS inside the `src/` directory which Step 4 always scans. The existing 6 exclusion rules do not catch `middleware.ts`: it's not a barrel file (has function bodies), not a test file, not a `.d.ts`, not a server action (`"use server"`), not a route file (`route.ts`), and not inside a service layer subdirectory (it lives directly in `src/`). Without an exclusion, `src/middleware.ts` would be scanned, potentially processed through Steps 5–6, and listed in the "Files modified" output — corrupting middleware logic that has no UI classes.
+- Root Cause: The `middleware.ts` filename as a scan-exclusion signal was never added to Step 4's exclusion rules. The existing exclusions covered barrel/test/declaration/server-action/route/service-layer patterns but not the middleware filename convention.
+- Fix Applied: Added Rule 7 to Step 4's "File exclusion rules" section: detect files named `middleware.ts`, `middleware.js`, `middleware.tsx`, or `middleware.jsx` in any directory — skip them entirely. Applies to both root-level `middleware.ts` and `src/middleware.ts`. Updated the exclusion explanation summary to include point (7).
+- Commit: see cycle 9 commit
+- Regression Risk: Any Next.js project with `src/middleware.ts` (the alternate middleware location documented by Next.js). Root-level `middleware.ts` was already safe (not in scan dirs), but `src/middleware.ts` was unprotected.
+
+---
+
+### BUG-023: Step 6 has no guidance for `cn()` and `clsx()` className wrapper calls
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 9 F1 — `/ui-restructure --style apple` on project using `cn()` (shadcn) and `clsx()` wrappers for conditional classNames
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 6 (Strip UI Structure), after template literal className guidance
+- Symptom: Many real-world Tailwind projects use `cn()` (from shadcn: `import { cn } from '@/lib/utils'`) or `clsx()` for merging conditional className strings. These appear as `className={cn("base classes", condition && "conditional classes")}` or `className={clsx("base", { "modifier": bool })}`. Step 6's strip guidance only covers plain string `className="..."` and template literal `` className={`...${cond ? 'a' : 'b'}`} ``. Without `cn()`/`clsx()` guidance, a strip pass could: (1) strip the entire `cn(...)` expression as if it were a className string, destroying the function wrapper, (2) fail to recognize `cn()` as a className at all and leave classes unstripped, (3) corrupt the `import { cn } from '@/lib/utils'` import. The wrapper call must be preserved; only the string values inside it should be updated.
+- Root Cause: Step 6 was written assuming className values are always plain strings or template literals. The `cn()`/`clsx()` utility wrapper pattern (extremely common in shadcn/Tailwind projects) was never documented or handled.
+- Fix Applied: Added a "`cn()` and `clsx()` utility wrapper handling" subsection to Step 6, after the template literal guidance. Rules: (1) NEVER strip the `cn()` or `clsx()` wrapper call itself, (2) NEVER strip the `import { cn }` or `import { clsx }` import statements, (3) treat arguments to `cn()`/`clsx()` the same as className strings — strip layout class values but preserve conditional logic (`variant === 'error' &&`), ternaries, and object syntax (`{ "opacity-50": dismissed }`), (4) during Step 10 rebuild, apply new style engine class values inside the wrapper while keeping the wrapper and all conditional structure intact. Added a complete before/after example showing strip and rebuild behavior.
+- Commit: see cycle 9 commit
+- Regression Risk: All projects using shadcn/ui (which mandates `cn()` from `@/lib/utils`) or any project using `clsx` for conditional classNames (extremely common in modern React/Tailwind apps). Without this fix, the skill could corrupt className wrapper expressions or fail to update class values inside them.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -283,6 +339,7 @@ _None — all Cycle 8 bugs fixed in same cycle._
 | 6 | 2026-04-21 | 20 | 50 | 13 | 79% | Cycle 6 — RSC, plain CSS, cross-imports, mixed styling, God Mode phases — 2 bugs found and fixed (BUG-010: RSC Server/Client Component distinction missing; BUG-011: plain CSS class-value rebuild guidance missing) [63 total assertions: 50 pass, 13 fail] |
 | 7 | 2026-04-21 | 26 | 53 | 8 | 87% | Cycle 7 — regressions, output format, layouts/, Framer Motion, barrel files, globals.css, shadcn variants — 4 bugs found and fixed (BUG-013: Framer Motion no detection/guidance; BUG-014: barrel files not excluded; BUG-015: test files not excluded; BUG-016: @tailwind directives unprotected in globals.css) [61 total assertions: 53 pass, 8 fail] |
 | 8 | 2026-04-21 | 29 | 57 | 9 | 86% | Cycle 8 — server actions, API routes, service layer, useReducer, .d.ts, config files, dynamic CSS Modules — 3 bugs found and fixed (BUG-017: "use server" files no scan exclusion; BUG-018: API route files no scan exclusion; BUG-019: service layer subdirs no scan exclusion) [66 total assertions: 57 pass, 9 fail] |
+| 9 | 2026-04-21 | 30+ | 93 | 0 | 100% | Cycle 9 — deep nesting, src/app/, middleware, useLayoutEffect/forwardRef/memo, cn()/clsx(), ARIA preservation, ref props, multi-export files — 4 bugs found and fixed (BUG-020: scan not recursive + route groups; BUG-021: src/app/ pattern not detected; BUG-022: middleware.ts no exclusion rule; BUG-023: cn()/clsx() wrappers no guidance) [93 total assertions: 93 pass, 0 fail — all bugs fixed in-cycle] |
 
 ---
 

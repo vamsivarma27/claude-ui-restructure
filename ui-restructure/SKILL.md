@@ -109,18 +109,22 @@ Load the parser reference: `parser/commands.md`
 
 ## Step 2 — Detect Framework
 
-Scan the project root for:
+Scan the project root and `src/` directory for these signals:
 
 | Signal | Framework |
 |---|---|
-| `app/` directory + `layout.tsx` | Next.js App Router |
+| `app/` directory (at root) + `layout.tsx` inside it | Next.js App Router |
+| `src/app/` directory + `layout.tsx` inside `src/app/` | Next.js App Router (src/ layout convention) |
 | `pages/` directory + `_app.tsx` | Next.js Pages Router |
 | `vite.config.ts` + no `app/` dir | React (Vite) |
 | `src/App.jsx` + `public/index.html` | React (CRA) |
 | `*.vue` files + `vite.config.ts` | Vue 3 |
 
+**`src/app/` pattern (Next.js App Router inside src/):** Many Next.js projects place the App Router directory inside `src/` — i.e., `src/app/layout.tsx` instead of `app/layout.tsx` at the project root. If `app/` is not present at the root but `src/app/` exists with a `layout.tsx`, detect this as **Next.js App Router**. In Step 4, scan `src/app/` as the App Router directory (instead of `app/`). All file exclusion rules and Server/Client Component rules apply identically. The scan root for App Router files is `src/app/` in this case.
+
 **Conflict resolution — when multiple signals match:**
 - If both `app/` (with `layout.tsx`) and `pages/` exist simultaneously: **App Router wins.** This is the Next.js 13+ hybrid convention. Treat the project as Next.js App Router and skip Pages Router scanning.
+- If `src/app/` (with `layout.tsx`) and `pages/` exist simultaneously: **App Router wins** — same rule applies.
 - If `*.vue` files exist alongside `app/` or `pages/`: Vue 3 wins (the `.vue` extension is a definitive signal).
 
 State detected framework before proceeding.
@@ -159,16 +163,20 @@ If Framer Motion is detected:
 
 Scan directories based on the detected framework (Step 2):
 
-**Always scan:**
+**Always scan (recursively — all nested subdirectories included):**
 - `components/`
 - `src/`
 - `layouts/`
 
-**Scan conditionally:**
+**Scan conditionally (recursively — all nested subdirectories included):**
 - `app/` — only if framework is Next.js App Router (or if both app/ and pages/ exist: App Router wins, scan only `app/`)
 - `pages/` — only if framework is Next.js Pages Router (not when App Router is detected)
 
-If both `app/` and `pages/` exist and App Router was detected: scan `app/` only. Do NOT scan or modify files in `pages/`.
+**Scanning is always recursive.** When a directory is listed for scanning, scan ALL files in ALL subdirectories at all depths — not just the top level. For example, `app/dashboard/analytics/components/ReportCard.tsx` (depth 4) and `app/dashboard/analytics/components/charts/LineChart.tsx` (depth 5) are both in scope when `app/` is scanned.
+
+**Route group directories** (Next.js App Router convention): directories whose names are wrapped in parentheses — e.g., `(auth)/`, `(marketing)/`, `(dashboard)/` — are route groups. They do NOT affect the URL path but they DO contain real component and page files. Treat them as regular directories during recursive scanning. Example: `app/(auth)/login/components/LoginForm.tsx` is in scope and must be processed.
+
+If both `app/` and `pages/` exist and App Router was detected: scan `app/` only (recursively). Do NOT scan or modify files in `pages/`.
 
 **File exclusion rules — NEVER scan or modify these files:**
 
@@ -209,7 +217,13 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - Exception: `hooks/` files that contain JSX (render hooks that return components) — scan these. Pure hook files (no JSX) — skip.
    - Note: `src/components/` and `app/components/` (explicit components subdirectories) are always scanned regardless of this rule.
 
-Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components.
+7. **Middleware files** — Next.js middleware intercepts requests at the edge; it contains routing/auth logic, no JSX:
+   - Files named `middleware.ts` / `middleware.js` / `middleware.tsx` / `middleware.jsx` in any directory
+   - These files export a `middleware(request: NextRequest)` function and a `config` object — pure routing logic, no UI classes
+   - Detection: if the filename is `middleware.ts` (or `middleware.js` / `middleware.tsx` / `middleware.jsx`) — it is a middleware file. Skip it.
+   - NEVER scan or modify middleware files — they contain no JSX or UI classes. This applies to `middleware.ts` at the project root AND `src/middleware.ts` inside the `src/` scan directory.
+
+Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components, (7) middleware files being scanned despite containing no UI.
 
 For each UI file (after exclusions), build a UI model:
 
@@ -321,6 +335,42 @@ Vue Single File Components have three blocks — handle each differently:
 - **`<style scoped>` block (and `<style>` block):** **Preserve as-is.** Do NOT strip, reset, or modify scoped styles. They are component-specific styles, not token files. Token files (Step 7) are separate global token sources.
 
 Template literal classNames with embedded logic (e.g., `` className={`base-classes ${condition ? 'a' : 'b'}`} ``): strip the static CSS class strings but preserve the ternary/conditional logic and the template literal structure itself.
+
+**`cn()` and `clsx()` utility wrapper handling:**
+
+Many real-world Tailwind projects pass `className` through a `cn()` function (from shadcn/ui: `import { cn } from '@/lib/utils'`) or `clsx()` function (`import { clsx } from 'clsx'`). These are utility wrappers that merge and deduplicate Tailwind class strings. The `className` value is a **function call expression**, not a plain string literal.
+
+Rules for handling `cn()` and `clsx()` wrappers:
+
+1. **NEVER strip the wrapper function call.** `className={cn(...)}` must remain `className={cn(...)}` after strip. Do NOT replace it with `className=""` or a plain string.
+2. **NEVER strip the `clsx()` wrapper.** Same rule: `className={clsx(...)}` remains `className={clsx(...)}`.
+3. **Preserve the import statements** for `cn` and `clsx` — `import { cn } from '@/lib/utils'` and `import { clsx } from 'clsx'` are NOT layout classes and must remain.
+4. **Strip the layout/spacing/typography class string values INSIDE the wrapper** — treat the arguments to `cn()` or `clsx()` the same as you would a plain `className` string: strip the Tailwind utility strings, but preserve conditional logic, ternaries, and object syntax (e.g., `{ "opacity-50": dismissed }` — preserve the object structure, update the class value if it is a layout class).
+5. **Preserve all conditional logic inside the wrapper** — `variant === 'error' && "bg-red-50 border-red-200"` strips the class string values but preserves `variant === 'error' &&`.
+
+Example:
+```jsx
+// Before (cn() wrapper)
+<div className={cn(
+  "flex items-center gap-3 px-4 py-3 rounded-lg border",
+  variant === 'error' && "bg-red-50 border-red-200 text-red-800"
+)}>
+  <button className={clsx("ml-auto p-1 rounded hover:bg-black/10", { "opacity-50": dismissed })}>
+
+// After strip (wrapper preserved, class strings cleared, conditional logic preserved):
+<div className={cn(
+  "",
+  variant === 'error' && ""
+)}>
+  <button className={clsx("", { "opacity-50": dismissed })}>
+
+// After rebuild (wrapper preserved, new style engine classes applied):
+<div className={cn(
+  "flex items-center gap-2 px-5 py-4 rounded-xl border",
+  variant === 'error' && "bg-red-50/80 border-red-200 text-red-900"
+)}>
+  <button className={clsx("ml-auto p-1.5 rounded-lg hover:bg-black/10", { "opacity-50": dismissed })}>
+```
 
 **Inline styles handling (when styling system is "Inline styles"):**
 
