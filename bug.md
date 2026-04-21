@@ -27,7 +27,7 @@ _None yet._
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
 |-------|------|-------------|------|------|-----------|-------|
-| —     | —    | —           | —    | —    | —         | First run pending |
+| 1 | 2026-04-21 | 10 | 10 | 0 | 100% | Cycle 1 — all personas passed, 0 bugs found |
 
 ---
 
