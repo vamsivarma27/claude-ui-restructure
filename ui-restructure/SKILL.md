@@ -238,6 +238,35 @@ Vue Single File Components have three blocks — handle each differently:
 
 Template literal classNames with embedded logic (e.g., `` className={`base-classes ${condition ? 'a' : 'b'}`} ``): strip the static CSS class strings but preserve the ternary/conditional logic and the template literal structure itself.
 
+**Inline styles handling (when styling system is "Inline styles"):**
+
+When Step 3 detected `style={{}}` props as the styling system, strip inline style property values during this step — but preserve the `style={{}}` prop structure and any dynamic/conditional values that reference state or props.
+
+- **Static visual values** (colors, padding, borderRadius, fontSize, fontWeight, background): clear the value or set to empty string — these will be replaced in Step 10.
+- **Dynamic values** that reference component state or props (e.g., `background: hovered ? '#f5f5f5' : '#fff'`): preserve the conditional logic but the actual color strings will be updated in Step 10.
+- **Event handlers** (`onMouseEnter`, `onMouseLeave`, etc.): NEVER touch — these are logic, not style.
+
+Example:
+```jsx
+// Before (inline styles)
+<div
+  style={{ padding: '16px', background: hovered ? '#f5f5f5' : '#fff', borderRadius: '8px' }}
+  onMouseEnter={() => setHovered(true)}
+  onMouseLeave={() => setHovered(false)}
+>
+  <h3 style={{ fontSize: '14px', fontWeight: 600 }}>{item.name}</h3>
+</div>
+
+// After strip (logic/structure preserved, visual values cleared for rebuild):
+<div
+  style={{ padding: '', background: hovered ? '' : '', borderRadius: '' }}
+  onMouseEnter={() => setHovered(true)}
+  onMouseLeave={() => setHovered(false)}
+>
+  <h3 style={{ fontSize: '', fontWeight: 600 }}>{item.name}</h3>
+</div>
+```
+
 ---
 
 ## Step 7 — Reset Design Tokens
@@ -307,6 +336,17 @@ Using the stripped components from Step 6 + the style engine from Step 8 + the m
 5. **Apply new color system** from style engine
 6. **Rebuild component structures** using new grid/layout
 7. **Write all modified files**
+
+**Inline styles rebuild (when styling system is "Inline styles"):**
+
+If Step 3 detected inline styles as the primary styling system, apply the new style engine values directly into the `style={{}}` props — do NOT convert to className unless the project has adopted Tailwind during the restructure.
+
+- Replace stripped padding/margin values with style engine spacing scale values (e.g., `padding: '16px'` → `padding: '16px'` from engine md spacing)
+- Replace stripped color values with style engine color system values (hex/rgba from engine)
+- Replace stripped borderRadius values with engine radius scale values
+- Replace stripped fontSize/fontWeight with engine typography scale values
+- For dynamic conditional values: update BOTH branches — e.g., `background: hovered ? '#f5f5f5' : '#fff'` → `background: hovered ? '[engine surface color]' : '[engine page color]'`
+- Preserve all event handlers, state references, and prop bindings unchanged
 
 For each file modified, show a brief diff summary.
 

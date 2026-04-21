@@ -174,6 +174,35 @@ Use shadows sparingly — only to indicate interactivity (hover state lift) or m
 
 ---
 
+## Motion & Transition
+
+Minimal motion is understated — transitions are present but never decorative. Content moves, chrome does not.
+
+```
+Duration scale:
+  micro:   100ms   → Button press, checkbox, toggle
+  fast:    150ms   → Input focus transition, hover state
+  normal:  200ms   → Dropdown, tooltip, card hover
+  medium:  250ms   → Modal appear, drawer
+  slow:    350ms   → Page transition, onboarding
+
+Easing:
+  entrance:  cubic-bezier(0.0, 0.0, 0.2, 1)    /* ease-out — default for all entrances */
+  exit:      cubic-bezier(0.4, 0.0, 1, 1)       /* ease-in — exits */
+  spring:    cubic-bezier(0.34, 1.56, 0.64, 1)  /* spring — button press, toggles only */
+```
+
+Tailwind patterns:
+```
+Interactive buttons:    transition-colors duration-[100ms] ease-out active:scale-[0.97]
+Card hover:             transition-shadow duration-200 ease-out hover:shadow-sm
+Input focus:            transition duration-[150ms] ease-out
+Navigation items:       transition-colors duration-[100ms]
+Modal/drawer:           duration-[250ms] ease-out (enter), duration-200 ease-in (exit)
+```
+
+---
+
 ## Tailwind Config Additions
 
 ```js

@@ -207,6 +207,36 @@ md:   0 4px 8px rgba(0,0,0,0.60)
 
 ---
 
+## Motion & Transition
+
+Linear motion is instant and precise — every transition is tighter than you expect. Speed signals power.
+
+```
+Duration scale:
+  instant:  75ms    → Button press, checkbox, toggle (Linear's signature snap)
+  micro:    100ms   → Hover state on list items, sidebar items
+  fast:     150ms   → Dropdown open, popover appear
+  normal:   200ms   → Modal appear, command palette
+  medium:   250ms   → Sidebar expand/collapse
+
+Easing:
+  default:  linear (most UI elements — precision over decoration)
+  entrance: cubic-bezier(0.0, 0.0, 0.2, 1)    /* ease-out for modal/overlay entrances */
+  exit:     cubic-bezier(0.4, 0.0, 1, 1)       /* ease-in for exits */
+  spring:   cubic-bezier(0.34, 1.56, 0.64, 1)  /* spring — only for toggles/active press */
+```
+
+Tailwind patterns:
+```
+Interactive buttons:    transition-colors duration-75 active:scale-[0.97]
+List item hover:        transition-colors duration-[100ms]
+Input focus:            transition-colors duration-[100ms]
+Sidebar item:           transition-colors duration-75
+Command palette:        duration-200 ease-out (enter), duration-150 ease-in (exit)
+```
+
+---
+
 ## Tailwind Config Additions
 
 ```js

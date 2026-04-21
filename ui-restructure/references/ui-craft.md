@@ -618,6 +618,8 @@ Icons
   □ Consistent icon library used
   □ Consistent stroke weight
   □ Optically aligned with adjacent text
+  □ aria-hidden="true" on all decorative icons (no semantic meaning)
+  □ aria-label on all icon-only interactive buttons
 
 Motion
   □ Every state transition has a duration + easing

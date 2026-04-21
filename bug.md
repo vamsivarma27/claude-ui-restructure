@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 3 bugs fixed in same cycle._
+_None — all Cycle 4 bugs fixed in same cycle._
 
 ---
 
@@ -75,6 +75,62 @@ _None — all Cycle 3 bugs fixed in same cycle._
 
 ---
 
+### BUG-005: All 4 engine files missing Motion/transition section
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 4 A1 — Engine Completeness Audit
+- Command: any `/ui-restructure --style apple|linear|minimal|dashboard` command
+- Skill File: `engines/apple.md`, `engines/linear.md`, `engines/dashboard.md`, `engines/minimal.md`
+- Line: End of each engine file (before Tailwind Config Additions)
+- Symptom: SKILL.md Step 8 says "read the engine file fully — it defines the complete design system." SKILL.md Step 11 instructs applying engine-specific motion (spring, easing, durations). But none of the 4 engine files defined a Motion/transition section — each engine has distinct motion character (Apple = smooth/organic/dramatic, Linear = instant/precise, Dashboard = functional/unobtrusive, Minimal = understated), but this was undocumented, forcing the skill to use only generic ui-craft.md Section 1 values for all engines.
+- Root Cause: The engine files were designed as visual/typography/color systems and motion specs were never added. This is a gap against the Cycle 4 audit requirement (required sections list: "Motion/transition specs (duration, easing)").
+- Fix Applied: Added a `## Motion & Transition` section to all 4 engine files. Each section includes a duration scale, easing curves, and Tailwind class patterns appropriate for that engine's design character.
+- Commit: see cycle 4 commit
+- Regression Risk: Medium — any command using these engines. Before the fix, the skill would apply generic motion from ui-craft.md instead of engine-specific motion. After the fix, each engine provides its own motion spec.
+
+---
+
+### BUG-006: ui-craft.md Section 11 checklist missing aria-hidden on decorative icons
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 4 A4 — ui-craft.md structure audit
+- Command: any command that triggers Step 11 polish pass
+- Skill File: `references/ui-craft.md`
+- Line: Section 11 (Polished Details Checklist), Icons block (line ~617)
+- Symptom: SKILL.md Step 11 explicitly requires: "Add aria-hidden='true' to all decorative icons." The Section 11 checklist had an "Icons" block but only listed: consistent library, consistent stroke weight, optically aligned. The `aria-hidden` requirement from SKILL.md was absent from the checklist that the skill is instructed to "run ... before finalizing."
+- Root Cause: The Section 11 checklist Icons block was written focusing on visual consistency (library/weight/size) but the accessibility requirement for decorative icons was not transferred from SKILL.md Step 11 into the checklist.
+- Fix Applied: Added two items to the Icons block in Section 11: `aria-hidden="true" on all decorative icons (no semantic meaning)` and `aria-label on all icon-only interactive buttons` (combining the existing ARIA label item from the Accessibility block for completeness).
+- Commit: see cycle 4 commit
+- Regression Risk: Low — checklist-only gap. The SKILL.md Step 11 text already required it; this ensures the checklist reinforces it.
+
+---
+
+### BUG-007: grid.md missing --grid list (reverse: grid → list) handling section
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 4 T1 — `--mode grid --grid list` runtime test
+- Command: `/ui-restructure --mode grid --grid list`
+- Skill File: `modes/grid.md`
+- Line: Grid Conversion section (line ~73), after "With --grid cards:"
+- Symptom: `commands.md` defines `--grid list` as "Force list layout (reverses existing grids to lists)." `grid.md` is the executing mode file, but it only documented the forward direction: list → grid. There was no `### With --grid list:` section explaining how to detect existing CSS grids and convert them to vertical list layouts. Without this guidance, the skill had no concrete instructions for the reverse conversion case.
+- Root Cause: grid.md was originally written to solve the common use case (list to grid) and the reverse case was defined in commands.md but never implemented in the mode file.
+- Fix Applied: Added a `### With --grid list:` section to grid.md. This includes: grid detection patterns (CSS grid, flex-wrap), a before/after conversion example (grid-cols-* → flex flex-col + horizontal list rows), and explicit rules for what to preserve (map loops, event handlers, key props) and what to convert (grid container classes → flex-col, gap values, item structure).
+- Commit: see cycle 4 commit
+- Regression Risk: Any user passing `--mode grid --grid list`. Previously the skill had no guide for this path, which could result in either no change or incorrect output.
+
+---
+
+### BUG-008: SKILL.md Steps 6 and 10 lack inline style={{}} handling guidance
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 4 T5 — inline styles as the only styling system
+- Command: `/ui-restructure --style minimal` on a project using only inline style={{}} props
+- Skill File: `SKILL.md`
+- Line: Step 6 (strip UI structure, line ~184), Step 10 (rebuild UI, line ~328)
+- Symptom: Step 3 correctly detects `style={{}}` as "Inline styles." However, Step 6's strip guidance only shows className removal examples. Step 10's rebuild instructions only mention regenerating tokens, applying spacing/color/typography via classes. For a pure inline-styles project, there are no classNames to strip or rebuild. The skill had no instructions for: (1) stripping inline style values (padding, background, fontSize, etc.) while preserving conditional/dynamic logic, (2) injecting new style engine values back into style={{}} props during rebuild.
+- Root Cause: Steps 6 and 10 were written with className-based styling systems (Tailwind, CSS Modules) in mind. The inline styles detection in Step 3 was never wired to corresponding strip/rebuild behavior in Steps 6 and 10.
+- Fix Applied: Added "Inline styles handling" subsection to Step 6: explains stripping static visual values (colors, padding, etc.) while preserving conditional logic in ternary expressions, with a before/after example. Added "Inline styles rebuild" subsection to Step 10: explains injecting style engine values directly into style={{}} props (not converting to className), with rules for both static and dynamic conditional values.
+- Commit: see cycle 4 commit
+- Regression Risk: All projects using inline styles as primary styling. Before the fix, the skill had no guidance for this case, risking either no visual change (styles left as-is) or broken output.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -82,6 +138,7 @@ _None — all Cycle 3 bugs fixed in same cycle._
 | 1 | 2026-04-21 | 10 | 10 | 0 | 100% | Cycle 1 — all personas passed, 0 bugs found |
 | 2 | 2026-04-21 | 10 | 8 | 2 | 83% | Cycle 2 — adversarial — 3 bugs found and fixed (BUG-001, BUG-002, BUG-003) |
 | 3 | 2026-04-21 | 15 | 14 | 1 | 97% | Cycle 3 — regression + probes — regressions all passed, 1 new bug (BUG-004) found and fixed |
+| 4 | 2026-04-21 | 13 | 9 | 4 | 75% | Cycle 4 — engine audit + untested paths — 4 bugs found and fixed (BUG-005: motion missing all engines; BUG-006: aria-hidden checklist gap; BUG-007: grid list reverse missing; BUG-008: inline styles no guidance) |
 
 ---
 

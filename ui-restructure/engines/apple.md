@@ -191,6 +191,36 @@ xl:   0 20px 60px rgba(0,0,0,0.15), 0 8px 24px rgba(0,0,0,0.10)
 
 ---
 
+## Motion & Transition
+
+Apple motion is smooth, organic, and slightly dramatic — reflecting physical materials.
+
+```
+Duration scale:
+  micro:   120ms   → Button press, checkbox, toggle
+  fast:    200ms   → Tooltip, badge, icon swap
+  normal:  280ms   → Dropdown, hover card, popover
+  medium:  360ms   → Modal appear, drawer slide
+  slow:    500ms   → Page transition, onboarding step
+
+Easing:
+  entrance:   cubic-bezier(0.0, 0.0, 0.2, 1)    /* Ease-out — decelerates into position */
+  exit:       cubic-bezier(0.4, 0.0, 1, 1)       /* Ease-in — accelerates out */
+  spring:     cubic-bezier(0.34, 1.56, 0.64, 1)  /* Overshoot spring — for button press, toggles */
+  smooth:     cubic-bezier(0.4, 0.0, 0.2, 1)     /* Ease-in-out — for two-way transitions */
+```
+
+Tailwind patterns:
+```
+Interactive buttons:    transition-all duration-200 ease-out active:scale-[0.97]
+Card hover:             transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lg
+Input focus:            transition-colors duration-150 ease-out
+Modal/sheet entrance:   duration-[360ms] ease-out (slide up from bottom on mobile)
+Backdrop blur toggle:   duration-200 ease-out
+```
+
+---
+
 ## Tailwind Config Additions
 
 ```js

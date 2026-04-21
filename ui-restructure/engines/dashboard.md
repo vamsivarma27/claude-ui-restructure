@@ -230,6 +230,37 @@ Active state:
 
 ---
 
+## Motion & Transition
+
+Dashboard motion is functional and unobtrusive — transitions confirm actions without distracting from data.
+
+```
+Duration scale:
+  micro:   100ms   → Button press, badge update, status dot change
+  fast:    150ms   → Table row hover, sidebar item hover
+  normal:  200ms   → Dropdown, tooltip, popover
+  medium:  280ms   → Side panel slide-in, modal appear
+  slow:    400ms   → Chart animation (data load), skeleton shimmer
+
+Easing:
+  entrance:  cubic-bezier(0.0, 0.0, 0.2, 1)    /* ease-out — panels/modals sliding in */
+  exit:      cubic-bezier(0.4, 0.0, 1, 1)       /* ease-in — panels sliding out */
+  spring:    cubic-bezier(0.34, 1.56, 0.64, 1)  /* spring — button press, toggles */
+  data:      ease-in-out                         /* for chart/data transitions */
+```
+
+Tailwind patterns:
+```
+Primary buttons:        transition-colors duration-[100ms] active:scale-[0.97]
+Table rows:             transition-colors duration-[150ms]
+Sidebar nav items:      transition-colors duration-[150ms]
+KPI card hover:         transition-shadow duration-200 ease-out hover:shadow-md
+Side panel slide-in:    duration-[280ms] ease-out (translateX)
+Skeleton shimmer:       animate-pulse (Tailwind) or custom shimmer animation
+```
+
+---
+
 ## Tailwind Config Additions
 
 ```js
