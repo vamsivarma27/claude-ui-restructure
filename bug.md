@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 13 bugs fixed in same cycle._
+_None — all Cycle 14 bugs fixed in same cycle._
 
 ---
 
@@ -425,6 +425,20 @@ _None — all Cycle 13 bugs fixed in same cycle._
 
 ---
 
+### BUG-035: Step 6 and Step 10 have no guidance for `cva()` (class-variance-authority) variant definitions
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 14 B1 — `cva()` variant definitions probe (shadcn/ui Button pattern)
+- Command: `/ui-restructure --style apple` on Next.js App Router project with `components/ui/button.tsx` using `cva()` for buttonVariants
+- Skill File: `SKILL.md`
+- Line: Step 6 (Strip UI Structure), Step 10 (Rebuild UI)
+- Symptom: Step 6's strip pass targets `className=` JSX attributes only. `cva()` calls are module-level function expressions — they contain base class strings and variant class strings (e.g., `"bg-primary text-primary-foreground hover:bg-primary/90"`) but they are NOT `className=` attributes. Step 6 never touches them. Step 10's rebuild targets JSX `className=` attributes, plus `@apply` values and `:root {}` CSS variables — but NOT `cva()` call arguments. After a `/ui-restructure --style apple` run on a shadcn/ui project: `:root {}` CSS variables and JSX classNames updated to apple values, but all `buttonVariants = cva(...)` definitions retained old pre-apple class strings. The button's visual output is driven entirely by `cva()` return values — so the button looked identical before and after the restructure, despite the JSX `className` expression being "updated." 7/10 assertions failed (B1-V1, B1-V2, B1-V3 — all base and variant class values unchanged).
+- Root Cause: `cva()` is a module-level className builder (used in shadcn/ui for every component: Button, Badge, Alert, Input, etc.). The skill was designed around JSX `className=` attribute stripping and never considered module-level class string definitions. `cva()` was introduced by shadcn/ui as the standard way to define multi-variant component class strings — it is extremely common in modern Next.js apps using shadcn.
+- Fix Applied: (1) Added `cva()` detection + flag section to Step 6: detect `import { cva } from "class-variance-authority"` in scanned files; flag for Step 10 rebuild; do NOT strip `cva()` calls during Step 6. (2) Added `cva()` rebuild subsection to Step 10: update base class string + all variant VALUE strings with engine values; preserve all variant NAMES, `defaultVariants`, `VariantProps` types, and cva import. Includes before/after example. (3) Added same guidance to restructure-flow.md Phase 2 (flag) and Phase 5 (rebuild). Also added `twMerge()` direct usage note to both SKILL.md and restructure-flow.md (same rules as `cn()` — never strip wrapper, treat string args as className strings).
+- Commit: see cycle 14 commit
+- Regression Risk: All projects using shadcn/ui (which uses `cva()` for every UI primitive: Button, Badge, Alert, Card, Dialog, Input, Select, etc.). Any project importing `class-variance-authority` would have unupdated cva() definitions after a restructure. This affects the majority of modern Next.js apps using the shadcn/ui component library.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -442,6 +456,7 @@ _None — all Cycle 13 bugs fixed in same cycle._
 | 11 | 2026-04-21 | 35+ | 56 | 9 | 86% | Cycle 11 — next/image, next/link, @keyframes/@font-face, next/font, spec consistency audit, --mode full explicit — 1 bug found and fixed (BUG-029: @font-face/@keyframes not explicitly protected in globals.css Step 7); BUG-028 and BUG-030 NOT triggered; F3 minor doc note (instrumentation.ts gap, low severity) [65 total assertions: 56 pass, 9 at-risk-before-fix — all resolved in-cycle] |
 | 12 | 2026-04-21 | 35+ | 62 | 0 | 100% | Cycle 12 — restructure-flow.md sync (BUG-031), class components, import type, spread props, Fragment, SSR guard, async RSC — 1 bug fixed (BUG-031: restructure-flow.md critically out of sync — Vue scoped contradiction + 11 missing protections); all Parts B–G assertions passed [62 total assertions: 62 pass, 0 fail — all resolved in-cycle] |
 | 13 | 2026-04-21 | 12 | 116 | 4 | 97% | Cycle 13 — full regression suite (10/10 pass, 100%) + new probes (2 bugs found and fixed): BUG-033 (@apply in @layer components not rebuilt — @layer protection too broad), BUG-034 (instrumentation.ts no scan exclusion rule). restructure-flow.md updated in sync. [120 total: 110 Part-A pass + 4/6 B1 pass + 2/2 B2 pass = 116 pass, 4 fail before fix → 0 fail after fix] |
+| 14 | 2026-04-21 | 13 | 122 | 3 | 98% | Cycle 14 — full regression suite (10/10 pass, 100%) + new probes (1 high-severity bug found and fixed): BUG-035 (cva() variant definitions in shadcn/ui components not rebuilt — module-level class strings invisible to strip/rebuild pass). Also added twMerge() explicit protection note. Probe B2 (next/font className) PASSED with no changes needed. [125 total: 112 Part-A + 7/10 B1 before fix + 4/4 B2 + 2/2 B3 = 122 pass before fix → 125 after fix] |
 
 ---
 

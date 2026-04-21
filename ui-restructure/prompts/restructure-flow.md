@@ -247,6 +247,14 @@ When className is passed through `cn()` (shadcn: `import { cn } from '@/lib/util
 4. **Strip the layout class string values INSIDE the wrapper** — same as plain className strings.
 5. **Preserve all conditional logic inside the wrapper** — `variant === 'error' && "bg-red-50"` strips the class value but preserves `variant === 'error' &&`.
 
+**`cva()` variant definitions — flag for Phase 5 rebuild (do NOT strip):**
+
+Files using `cva()` from `class-variance-authority` (shadcn/ui pattern) have module-level variant definitions that contain class strings but are NOT `className=` JSX attributes. Do NOT strip `cva()` calls during Phase 2 stripping.
+
+During Phase 2 scan: if a file contains `import { cva } from "class-variance-authority"` — flag it for `cva()` rebuild in Phase 5. Do not strip the `cva(...)` call or its import. The `className={cn(buttonVariants({ variant, size }), className)}` JSX expression also does NOT need stripping (it contains no literal class strings — only a function call result).
+
+`twMerge()` from `tailwind-merge` used directly as a className wrapper (not via `cn()`) follows the same rules as `cn()` — never strip the wrapper; treat string arguments inside it as className strings; preserve the import.
+
 **Vue SFC handling (when framework is Vue 3):**
 
 Vue Single File Components — handle each block differently:
@@ -398,7 +406,22 @@ Verify:
   □ Class component lifecycle methods preserved (componentDidCatch, etc.)
   □ Spread props preserved ({...btn}, {...props})
   □ React.Fragment / Fragment preserved (including named Fragment with key)
+  □ cva() calls: variant/size NAMES unchanged, defaultVariants unchanged, import preserved
 ```
+
+**`cva()` variant definitions rebuild (for files flagged in Phase 2):**
+
+For any file flagged as having `import { cva } from "class-variance-authority"` during Phase 2 scan, also rebuild the `cva()` class strings in this phase:
+
+- **Update:** the base class string (first `cva()` argument) with engine radius, font, spacing, and transition values
+- **Update:** every variant VALUE string (e.g., `default: "bg-primary ..."`, `outline: "border ..."`) with engine color/background values
+- **Update:** every size VALUE string with engine spacing/height values
+- **Preserve:** all variant NAME keys (`default`, `destructive`, `outline`, `ghost`, `sm`, `lg`, `icon`, etc.) — only VALUES change
+- **Preserve:** `defaultVariants` object — never change
+- **Preserve:** `VariantProps<typeof ...>` TypeScript types
+- **Preserve:** `import { cva, type VariantProps } from "class-variance-authority"` — never remove
+
+The JSX `className={cn(buttonVariants({ variant, size }), className)}` does NOT need separate changes — it references the now-rebuilt `cva()` definition automatically.
 
 ---
 

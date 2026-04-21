@@ -406,6 +406,18 @@ Example:
   <button className={clsx("ml-auto p-1.5 rounded-lg hover:bg-black/10", { "opacity-50": dismissed })}>
 ```
 
+**`cva()` variant definitions (class-variance-authority) — flag for Step 10 rebuild:**
+
+Many projects — especially those using shadcn/ui — define component styles using `cva()` (class-variance-authority) at the module level. A `cva()` call contains the base class string and variant class strings, but it is a **module-level function expression**, NOT a JSX `className=` attribute. The strip pass (Step 6) does NOT strip `cva()` calls.
+
+Instead, during Step 6 scan, detect `cva()` usage and flag the file for `cva()` rebuild in Step 10:
+- Detection: if a file contains `import { cva } from "class-variance-authority"` or `import { cva, type VariantProps } from "class-variance-authority"` — this file has `cva()` definitions to rebuild in Step 10.
+- Do NOT strip `cva()` calls during Step 6.
+- Do NOT strip the `import { cva ... }` import statement.
+- The JSX `className={cn(buttonVariants({ variant, size }), className)}` expression also does NOT need stripping — `buttonVariants({...})` is a function call result, not a class string.
+
+**Also note:** `twMerge()` from `tailwind-merge` used directly as a className wrapper (not via `cn()`) follows the same rules as `cn()` — NEVER strip the `twMerge()` wrapper; treat string arguments inside it the same as plain `className` strings; preserve the import statement.
+
 **Inline styles handling (when styling system is "Inline styles"):**
 
 When Step 3 detected `style={{}}` props as the styling system, strip inline style property values during this step — but preserve the `style={{}}` prop structure and any dynamic/conditional values that reference state or props.
@@ -687,6 +699,55 @@ If `globals.css` contains `@layer components { }` blocks with custom class defin
   .card        { @apply rounded-2xl border border-white/20 bg-white/80 shadow-xl backdrop-blur-md p-6; }
 }
 ```
+
+**`cva()` variant definitions rebuild (when a file has `import { cva } from "class-variance-authority"`):**
+
+If Step 6 flagged a file as having `cva()` definitions, update the Tailwind class strings inside every `cva(...)` call in that file with style engine values.
+
+- **Update:** the base class string (first argument to `cva()`) — apply engine radius, font, spacing, and transition values
+- **Update:** every variant VALUE string inside the `variants: { }` object — apply engine color, background, border values for each variant
+- **Update:** every size VALUE string inside the `size: { }` (or equivalent) variants — apply engine spacing/height values
+- **Preserve:** the `cva()` function call itself — NEVER remove or rename it
+- **Preserve:** all variant and size NAMES (`default`, `destructive`, `outline`, `ghost`, `sm`, `lg`, `icon`, etc.) — these are the public component API. Only the class VALUES change.
+- **Preserve:** the `defaultVariants` object — NEVER change
+- **Preserve:** the `VariantProps<typeof variantName>` TypeScript type — NEVER change
+- **Preserve:** `import { cva, type VariantProps } from "class-variance-authority"` — NEVER remove
+
+```tsx
+// Before (old cva() class values)
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium transition-colors",
+  {
+    variants: {
+      variant: {
+        default:  "bg-primary text-primary-foreground hover:bg-primary/90",
+        outline:  "border border-input bg-background hover:bg-accent",
+        ghost:    "hover:bg-accent hover:text-accent-foreground",
+      },
+      size: { default: "h-10 px-4 py-2", sm: "h-9 px-3", lg: "h-11 px-8" },
+    },
+    defaultVariants: { variant: "default", size: "default" },   // ← PRESERVE unchanged
+  }
+)
+
+// After (apple engine values applied)
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-xl text-sm font-medium transition-all backdrop-blur-sm",
+  {
+    variants: {
+      variant: {
+        default:  "bg-blue-500/90 text-white hover:bg-blue-600/90 shadow-lg shadow-blue-500/25",
+        outline:  "border border-white/20 bg-white/10 hover:bg-white/20 backdrop-blur-md",
+        ghost:    "hover:bg-white/10 hover:text-white/90",
+      },
+      size: { default: "h-10 px-5 py-2.5", sm: "h-9 px-3.5", lg: "h-11 px-9" },
+    },
+    defaultVariants: { variant: "default", size: "default" },   // ← unchanged
+  }
+)
+```
+
+Note: the `className={cn(buttonVariants({ variant, size }), className)}` JSX expression requires no separate changes — it dynamically produces class strings from the now-rebuilt `cva()` definition.
 
 For each file modified, show a brief diff summary.
 
