@@ -98,8 +98,8 @@ When `--prompt` is provided:
 Boolean flag (no value).
 
 When set:
-- Skip Step 6 (token reset)
-- Skip Step 7 token regeneration
+- Skip Step 7 (token reset) — preserves all existing token files
+- Skip Step 7 token regeneration (tokens are not reset or rebuilt)
 - Only rebuild layout/structure using existing token classes
 
 ### `--grid`

@@ -87,6 +87,10 @@ Scan the project root for:
 | `src/App.jsx` + `public/index.html` | React (CRA) |
 | `*.vue` files + `vite.config.ts` | Vue 3 |
 
+**Conflict resolution — when multiple signals match:**
+- If both `app/` (with `layout.tsx`) and `pages/` exist simultaneously: **App Router wins.** This is the Next.js 13+ hybrid convention. Treat the project as Next.js App Router and skip Pages Router scanning.
+- If `*.vue` files exist alongside `app/` or `pages/`: Vue 3 wins (the `.vue` extension is a definitive signal).
+
 State detected framework before proceeding.
 
 ---
@@ -110,12 +114,18 @@ Multiple systems may coexist. Record all detected systems.
 
 ## Step 4 — Scan UI Files
 
-Scan these directories:
+Scan directories based on the detected framework (Step 2):
+
+**Always scan:**
 - `components/`
-- `app/`
-- `pages/`
 - `src/`
 - `layouts/`
+
+**Scan conditionally:**
+- `app/` — only if framework is Next.js App Router (or if both app/ and pages/ exist: App Router wins, scan only `app/`)
+- `pages/` — only if framework is Next.js Pages Router (not when App Router is detected)
+
+If both `app/` and `pages/` exist and App Router was detected: scan `app/` only. Do NOT scan or modify files in `pages/`.
 
 For each UI file, build a UI model:
 
@@ -217,6 +227,16 @@ After (logic preserved, layout stripped):
 ```
 
 Repeat for all UI files. Do NOT strip logic. Do NOT strip semantic HTML tags. Do NOT strip key props.
+
+**Vue SFC handling (when framework is Vue 3):**
+
+Vue Single File Components have three blocks — handle each differently:
+
+- **`<template>` block:** Strip `class="..."` and `:class="..."` attributes that contain only layout/spacing/typography classes. Preserve `:class` expressions that contain conditional logic (e.g., `:class="isActive ? 'active' : ''"` — strip the class values but preserve the ternary structure). Preserve `v-for`, `:key`, `@click`, `v-if`, and all other Vue directives and bindings.
+- **`<script setup>` block (and `<script>` block):** Do NOT modify. This contains all component logic — `defineProps`, `defineEmits`, `computed`, `ref`, `reactive`, event handlers. It is fully protected under the PRESERVE rules.
+- **`<style scoped>` block (and `<style>` block):** **Preserve as-is.** Do NOT strip, reset, or modify scoped styles. They are component-specific styles, not token files. Token files (Step 7) are separate global token sources.
+
+Template literal classNames with embedded logic (e.g., `` className={`base-classes ${condition ? 'a' : 'b'}`} ``): strip the static CSS class strings but preserve the ternary/conditional logic and the template literal structure itself.
 
 ---
 
