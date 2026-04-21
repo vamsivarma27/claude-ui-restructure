@@ -56,6 +56,38 @@ God Mode CAN combine with `--style` — the style engine defines visual language
 
 ---
 
+### Next.js App Router — Server vs Client Component Rules (Non-Negotiable)
+
+When the framework is **Next.js App Router**, every component file is either a Server Component or a Client Component. The skill MUST respect this distinction at all times.
+
+**How to identify each type:**
+- **Client Component:** File begins with `"use client"` directive (first line, before any imports)
+- **Server Component:** File has NO `"use client"` directive — it may use `async`/`await`, call `db.query(...)`, call `getServerSession()`, or other server-side APIs
+
+**Rules — never violate these:**
+
+1. **NEVER add `"use client"` to a Server Component.** Adding `"use client"` to a Server Component would break the application — it cannot use server-side APIs (DB, session, server-only imports) in a Client Component.
+
+2. **NEVER remove `"use client"` from a Client Component.** Removing the directive would cause a build error — hooks (`useState`, `useCallback`, etc.) and event handlers (`onClick`, `onMouseEnter`, etc.) are not allowed in Server Components.
+
+3. **NEVER modify the `"use client"` directive itself** — do not move it, rename it, or alter its position at the top of the file.
+
+4. **Server-side data access is preserved like hooks:** Calls to `db.query(...)`, `getServerSession()`, `prisma.findMany(...)`, and other server-side APIs in Server Components fall under the NEVER modify rule (same protection as `fetch` and API calls). Treat them as protected logic regardless of whether they look like "API calls" or "database calls."
+
+5. **Async Server Components:** A component defined as `export default async function MyComponent()` with no `"use client"` is a Server Component. Do NOT add `"use client"` to make it non-async or to enable hooks.
+
+**In Step 4 (Scan UI Files):** When scanning App Router files, record for each file:
+- Is it a Client Component? (starts with `"use client"`)
+- Is it a Server Component? (no `"use client"` directive)
+
+**In Step 6 (Strip UI Structure):** Strip layout/styling classes as normal. But for both Server and Client Components:
+- Preserve the `"use client"` directive exactly as-is at the top of Client Component files
+- Do NOT add `"use client"` to Server Component files during stripping
+
+**In Step 10 (Rebuild UI):** Rebuild layout and classes as normal. The `"use client"` status of each file does not change during rebuild — only layout/styling classes change.
+
+---
+
 ## Step 1 — Parse Command Arguments
 
 Read the user's `/restructure` command and extract:
@@ -267,6 +299,19 @@ Example:
 </div>
 ```
 
+**Plain CSS handling (when styling system is "Plain CSS"):**
+
+When Step 3 detected plain `*.css` imports (e.g., `import './styles/card.css'`), the JSX and CSS files require different treatment during the strip step.
+
+**In JSX/TSX component files:**
+- **DO NOT strip `className` values** — for Plain CSS projects, `className="card"` is not a utility class; it is a selector reference that matches a rule in the `.css` file. Stripping the className would break the CSS link. Preserve all `className` attributes exactly as-is.
+- **DO NOT remove CSS import statements** — `import './styles/card.css'` (or similar path) must remain. It is not a layout class; removing it would break all styles for the component.
+- **DO strip** any Tailwind utility classes mixed alongside plain CSS class names (if both systems coexist). If the project is purely plain CSS with no Tailwind, do not strip any classNames.
+
+**In CSS files (`*.css`):**
+- Do NOT strip anything during the strip step. CSS files are rebuilt in Step 10.
+- CSS files are NOT token files — do not process them in Step 7.
+
 ---
 
 ## Step 7 — Reset Design Tokens
@@ -347,6 +392,43 @@ If Step 3 detected inline styles as the primary styling system, apply the new st
 - Replace stripped fontSize/fontWeight with engine typography scale values
 - For dynamic conditional values: update BOTH branches — e.g., `background: hovered ? '#f5f5f5' : '#fff'` → `background: hovered ? '[engine surface color]' : '[engine page color]'`
 - Preserve all event handlers, state references, and prop bindings unchanged
+
+**Plain CSS rebuild (when styling system is "Plain CSS"):**
+
+If Step 3 detected plain CSS imports (`import './styles/card.css'` or similar), rebuild the CSS files with style engine values while preserving all CSS structure.
+
+**JSX/TSX component files:** Do NOT change classNames (they are CSS selector references, not utility classes). The component files need NO className changes — only the CSS files change.
+
+**CSS files (`*.css`):** Update property VALUES inside each rule block — keep all class selectors (`.card`, `.card-title`, etc.) exactly as-is. Only the values change:
+
+```css
+/* Before — original values */
+.card { padding: 16px; background: #fff; border-radius: 8px; border: 1px solid #e5e7eb; }
+.card-title { font-size: 14px; font-weight: 600; color: #111; }
+.card-btn { padding: 8px 16px; background: #6366f1; color: #fff; border-radius: 6px; }
+
+/* After — style engine values applied (example: minimal engine) */
+.card { padding: 16px; background: #FAFAFA; border-radius: 6px; border: 1px solid #E5E5E5; }
+.card-title { font-size: 14px; font-weight: 600; color: #171717; }
+.card-btn { padding: 8px 16px; background: #171717; color: #FFFFFF; border-radius: 4px; }
+```
+
+**CSS custom properties (`variables.css`):** Update variable values with style engine color, spacing, and radius values:
+
+```css
+/* Before */
+:root { --color-primary: #6366f1; --color-bg: #fff; --radius-md: 8px; }
+
+/* After — style engine values applied */
+:root { --color-primary: #171717; --color-bg: #FFFFFF; --radius-md: 6px; }
+```
+
+**Rules:**
+- NEVER rename CSS class selectors
+- NEVER remove CSS rules or properties
+- NEVER change the CSS file structure (selector order, rule grouping)
+- ONLY update property values (colors, padding, border-radius, font-size, font-weight, etc.) to match the style engine
+- `import './styles/*.css'` statements in JSX/TSX are preserved unchanged (Step 6 rule)
 
 For each file modified, show a brief diff summary.
 

@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 5 bugs fixed in same cycle._
+_None — all Cycle 6 bugs fixed in same cycle._
 
 ---
 
@@ -145,6 +145,34 @@ _None — all Cycle 5 bugs fixed in same cycle._
 
 ---
 
+### BUG-010: SKILL.md has no guidance for Next.js App Router Server vs Client Component distinction
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 6 B1 — `/ui-restructure --style apple` on Next.js App Router project with Server and Client Components
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Behavior Rules section (line ~37), Step 4 (Scan UI Files), Step 6 (Strip UI Structure), Step 10 (Rebuild UI)
+- Symptom: Next.js 13+ App Router uses Server Components (no `"use client"`) and Client Components (`"use client"` at top). SKILL.md had zero guidance on this distinction. The skill could: (1) add `"use client"` to Server Components (breaking async data access like `db.query()`, `getServerSession()`), (2) remove `"use client"` from Client Components (breaking hooks and event handlers), or (3) fail to recognize server-side data access (`db.query`, `getServerSession`) as protected logic equivalent to API calls. B1-V1 through B1-V5 (directive preservation) and B1-V9/B1-V10 (server-side data access) all had no guidance.
+- Root Cause: The Behavior Rules and step-by-step guidance were written before App Router RSC architecture became prevalent. The `"use client"` directive is a React/Next.js compile-time boundary marker — not a className or logic statement — and fell through all existing protection categories.
+- Fix Applied: Added a "Next.js App Router — Server vs Client Component Rules (Non-Negotiable)" section to SKILL.md immediately after the Behavior Rules block. This section: (1) defines how to identify Server vs Client Components by presence/absence of `"use client"`, (2) lists 5 explicit rules (never add `"use client"` to Server Components, never remove from Client Components, never modify the directive, treat server-side data access like db.query/getServerSession as protected logic, treat async Server Components as Server Components), (3) instructs Step 4 to record component type during scan, (4) instructs Step 6 to preserve `"use client"` during strip, (5) instructs Step 10 to not change component type during rebuild.
+- Commit: see cycle 6 commit
+- Regression Risk: High — all Next.js App Router projects. Any project using the App Router has Server Components by default. Without this fix, the skill had no protection for the `"use client"` directive or server-side data access patterns unique to RSC architecture.
+
+---
+
+### BUG-011: SKILL.md Steps 6 and 10 have no guidance for plain CSS class-value rebuilding
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 6 C1 — `/ui-restructure --style minimal` on React CRA project using plain `*.css` imports
+- Command: `/ui-restructure --style minimal`
+- Skill File: `SKILL.md`
+- Line: Step 6 (Strip UI Structure, line ~220), Step 10 (Rebuild UI, line ~373)
+- Symptom: Step 3 correctly detects "Plain CSS" from `*.css` imports. However, Steps 6 and 10 had no guidance for plain CSS projects. Without guidance: (1) Step 6 would incorrectly strip `className="card"` (a CSS selector reference) as if it were a Tailwind utility class — breaking the CSS link, (2) Step 6 could strip or corrupt `import './styles/card.css'` import statements, (3) Step 10 had no instructions for updating CSS property VALUES inside `.card { ... }` rules while preserving selector names, (4) there was no guidance that class names in JSX must NOT change (only CSS values change). C1-V4 (import not removed), C1-V5 (classNames preserved), C1-V6 (CSS values updated), C1-V8 (CSS structure preserved) all failed.
+- Root Cause: Steps 6 and 10 were written assuming className-based styling (Tailwind, CSS Modules) where classNames map to utility values. For plain CSS, classNames are selector references — stripping them destroys the CSS connection. The distinction between "className as utility class" (Tailwind) and "className as selector reference" (plain CSS) was never documented.
+- Fix Applied: Added "Plain CSS handling" subsection to Step 6: instructs preserving `className` attributes and CSS import statements for plain CSS projects; CSS files are not touched during strip. Added "Plain CSS rebuild" subsection to Step 10: provides before/after example of updating CSS property values while keeping selectors intact; lists explicit rules (never rename selectors, never remove rules/properties, only update values); covers `variables.css` custom property updating; clarifies that JSX files need no className changes — only the CSS files change.
+- Commit: see cycle 6 commit
+- Regression Risk: All projects using plain CSS imports as their primary styling system. Before the fix, the skill had no guidance for this styling pattern, risking either no visual change (CSS not touched at all) or broken output (classNames stripped, CSS links destroyed).
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -154,6 +182,7 @@ _None — all Cycle 5 bugs fixed in same cycle._
 | 3 | 2026-04-21 | 15 | 14 | 1 | 97% | Cycle 3 — regression + probes — regressions all passed, 1 new bug (BUG-004) found and fixed |
 | 4 | 2026-04-21 | 13 | 9 | 4 | 75% | Cycle 4 — engine audit + untested paths — 4 bugs found and fixed (BUG-005: motion missing all engines; BUG-006: aria-hidden checklist gap; BUG-007: grid list reverse missing; BUG-008: inline styles no guidance) |
 | 5 | 2026-04-21 | 19 | 19 | 0 | 100% | Cycle 5 — regression sweep + new combinations — 4 regressions all pass, 10 personas all pass, 5 new combos: 1 doc bug (BUG-009: --prompt + --god-mode undocumented) found and fixed |
+| 6 | 2026-04-21 | 20 | 50 | 13 | 79% | Cycle 6 — RSC, plain CSS, cross-imports, mixed styling, God Mode phases — 2 bugs found and fixed (BUG-010: RSC Server/Client Component distinction missing; BUG-011: plain CSS class-value rebuild guidance missing) [63 total assertions: 50 pass, 13 fail] |
 
 ---
 
