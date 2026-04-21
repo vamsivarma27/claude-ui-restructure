@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 16 bugs fixed in same cycle._
+_None — all Cycle 17 bugs fixed in same cycle._
 
 ---
 
@@ -467,6 +467,20 @@ _None — all Cycle 16 bugs fixed in same cycle._
 
 ---
 
+### BUG-038: `@layer utilities {}` contents not explicitly protected — spec ambiguity could cause incorrect rebuild
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 17 B1 — `@layer utilities {}` vs `@layer components {}` differentiation probe
+- Command: `/ui-restructure --style apple` on Next.js App Router + Tailwind project with `globals.css` containing both `@layer utilities { .no-scrollbar { ... } .flex-center { @apply flex items-center justify-center; } }` and `@layer components { .btn { @apply flex gap-2 px-4 py-2 bg-blue-500 rounded-md; } }`
+- Skill File: `SKILL.md`
+- Line: Step 7 (Reset Design Tokens), globals.css Protected Content, Item 4
+- Symptom: The BUG-033 fix (Cycle 13) explicitly distinguished `@layer base {}` (fully preserved) from `@layer components {}` (wrapper preserved, `@apply` values rebuilt). However, it never mentioned `@layer utilities {}`, leaving an ambiguity: an implementation reading the spec could reasonably treat `@layer utilities {}` like `@layer components {}` (rebuild `@apply` values) instead of like `@layer base {}` (fully preserve). This would incorrectly rebuild utility helper classes like `.no-scrollbar`, `.flex-center`, `.text-balance` — single-purpose helpers that are not component design token definitions. Score before fix: 4/6 assertions fail (67%).
+- Root Cause: The three-layer taxonomy (`@layer base`, `@layer components`, `@layer utilities`) was never explicitly documented in the spec. BUG-033 covered only the two layers it needed to distinguish — base vs components — without stating the rule for the third layer (utilities). This spec gap left the behavior for `@layer utilities {}` undefined.
+- Fix Applied: Added explicit `@layer utilities {}` protection clause to Step 7 Item 4: "Fully preserve `@layer utilities {}` contents as-is — custom utility classes are single-purpose helper utilities, NOT component design token definitions. NEVER rebuild `@layer utilities {}` contents with engine values." Added three-way rule summary: `@layer base {}` → fully preserved; `@layer utilities {}` → fully preserved; `@layer components {}` → wrapper preserved, `@apply` values rebuilt. Updated `restructure-flow.md` Phase 3 Item 4 to match.
+- Commit: see cycle 17 commit
+- Regression Risk: Any project using Tailwind `@layer utilities {}` in globals.css (a documented Tailwind pattern for custom utility classes). Common classes: `.no-scrollbar` (hide scrollbars), `.flex-center` (flex shorthand), `.text-balance` (balanced text wrapping), `.overlay` (absolute overlay). Before the fix, the spec was ambiguous and an implementation could have incorrectly treated these like component classes and rebuilt them with engine values.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -487,6 +501,7 @@ _None — all Cycle 16 bugs fixed in same cycle._
 | 14 | 2026-04-21 | 13 | 122 | 3 | 98% | Cycle 14 — full regression suite (10/10 pass, 100%) + new probes (1 high-severity bug found and fixed): BUG-035 (cva() variant definitions in shadcn/ui components not rebuilt — module-level class strings invisible to strip/rebuild pass). Also added twMerge() explicit protection note. Probe B2 (next/font className) PASSED with no changes needed. [125 total: 112 Part-A + 7/10 B1 before fix + 4/4 B2 + 2/2 B3 = 122 pass before fix → 125 after fix] |
 | 15 | 2026-04-21 | 13 | 118 | 6 | 95% | Cycle 15 — full regression suite (10/10 pass, 100%) + new probes: BUG-036 (context/ excluded entirely — ThemeProvider/LayoutProvider JSX not scanned). Also added globals.css path resolution note for src/ convention and Tailwind v4 @import coverage confirmed (PASS). [124 total: 112 Part-A + 0/6 B1 before fix + 4/4 B2 + 2/2 B3 = 118 pass before fix → 124 after fix] |
 | 16 | 2026-04-21 | 14 | 124 | 3 | 98% | Cycle 16 — full regression suite (10/10 pass, 100%) + new probes: BUG-037 (@apply in standalone CSS files not rebuilt — Plain CSS rebuild guidance covered standard CSS properties but not @apply directive). Added useCallback/useMemo/useRef/useContext to explicit PRESERVE list. Probes B2–B4 (useCallback, providers.tsx, compound components) all PASSED. [127 total: 112 Part-A + 3/6 B1 before fix + 3/3 B2 + 4/4 B3+B4 = 124 pass → 127 after fix] |
+| 17 | 2026-04-21 | 13 | 118 | 4 | 97% | Cycle 17 — full regression suite (10/10 pass, 100%, 112/112 assertions) + new probes: BUG-038 (@layer utilities {} protection ambiguous — spec only covered base vs components, never stated utilities are fully preserved). Probes B2 (string concat className) and B3 (React.memo + displayName) PASSED. [122 total: 112 Part-A + 4/6 B1 before fix + 2/2 B2 + 2/2 B3 = 118 pass before fix → 122 after fix] |
 
 ---
 
