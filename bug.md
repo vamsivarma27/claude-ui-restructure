@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 14 bugs fixed in same cycle._
+_None — all Cycle 15 bugs fixed in same cycle._
 
 ---
 
@@ -439,6 +439,20 @@ _None — all Cycle 14 bugs fixed in same cycle._
 
 ---
 
+### BUG-036: Step 4 Rule 6 excludes `context/` entirely — provider components with JSX (ThemeProvider, LayoutProvider) never scanned
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 15 B1 — `context/ThemeProvider.tsx` with JSX probe
+- Command: `/ui-restructure --style apple` on Next.js App Router project with `src/context/ThemeContext.tsx` containing a `ThemeProvider` component with `className="min-h-screen bg-background text-foreground font-sans antialiased transition-colors duration-300"`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules Rule 6
+- Symptom: Rule 6 lists `context/` as a service layer directory to skip entirely. A file at `src/context/ThemeContext.tsx` was excluded from the scan even though it contained a `ThemeProvider` React component with JSX and layout classNames. After restructure: all JSX components in `components/` and `app/` were updated to apple style, but the layout wrapper inside `ThemeProvider` (`<div className="min-h-screen bg-background ...">`) was untouched — retaining old values and potentially creating a visual inconsistency (the ThemeProvider outer div determines the page-level background and font settings for the whole app).
+- Root Cause: Rule 6 was added (BUG-019 fix) to exclude non-UI service layer code from scan. The `context/` exclusion was intended for pure context definition files (`createContext`, `useContext`, type exports). However, many React codebases put React **provider components** in `context/` directories — these providers render JSX layout wrappers that need to be restructured. The `hooks/` exception (scan hooks with JSX, skip pure hooks) was never extended to `context/`.
+- Fix Applied: Added a `context/` exception to Rule 6 that mirrors the `hooks/` exception: `context/` files that contain JSX (React provider components with `<` tags and `className` props) — scan these. Pure context definition files (only `createContext`, `useContext`, type definitions, no JSX) — skip. Detection: if the file contains any JSX — scan it; otherwise skip.
+- Commit: see cycle 15 commit
+- Regression Risk: Any project with React provider components in a `context/` directory (extremely common pattern — `ThemeProvider`, `AuthProvider`, `LayoutProvider`, `ToastProvider` etc.). These providers frequently render layout-level wrappers (min-h-screen, bg-background, font settings) that need updating on every restructure. Before the fix, these files were silently skipped, leaving top-level layout shells with old design values.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -457,6 +471,7 @@ _None — all Cycle 14 bugs fixed in same cycle._
 | 12 | 2026-04-21 | 35+ | 62 | 0 | 100% | Cycle 12 — restructure-flow.md sync (BUG-031), class components, import type, spread props, Fragment, SSR guard, async RSC — 1 bug fixed (BUG-031: restructure-flow.md critically out of sync — Vue scoped contradiction + 11 missing protections); all Parts B–G assertions passed [62 total assertions: 62 pass, 0 fail — all resolved in-cycle] |
 | 13 | 2026-04-21 | 12 | 116 | 4 | 97% | Cycle 13 — full regression suite (10/10 pass, 100%) + new probes (2 bugs found and fixed): BUG-033 (@apply in @layer components not rebuilt — @layer protection too broad), BUG-034 (instrumentation.ts no scan exclusion rule). restructure-flow.md updated in sync. [120 total: 110 Part-A pass + 4/6 B1 pass + 2/2 B2 pass = 116 pass, 4 fail before fix → 0 fail after fix] |
 | 14 | 2026-04-21 | 13 | 122 | 3 | 98% | Cycle 14 — full regression suite (10/10 pass, 100%) + new probes (1 high-severity bug found and fixed): BUG-035 (cva() variant definitions in shadcn/ui components not rebuilt — module-level class strings invisible to strip/rebuild pass). Also added twMerge() explicit protection note. Probe B2 (next/font className) PASSED with no changes needed. [125 total: 112 Part-A + 7/10 B1 before fix + 4/4 B2 + 2/2 B3 = 122 pass before fix → 125 after fix] |
+| 15 | 2026-04-21 | 13 | 118 | 6 | 95% | Cycle 15 — full regression suite (10/10 pass, 100%) + new probes: BUG-036 (context/ excluded entirely — ThemeProvider/LayoutProvider JSX not scanned). Also added globals.css path resolution note for src/ convention and Tailwind v4 @import coverage confirmed (PASS). [124 total: 112 Part-A + 0/6 B1 before fix + 4/4 B2 + 2/2 B3 = 118 pass before fix → 124 after fix] |
 
 ---
 

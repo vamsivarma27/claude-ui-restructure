@@ -139,6 +139,7 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - When scanning `src/` or `app/`, skip files inside these subdirectories: `lib/`, `utils/`, `services/`, `helpers/`, `hooks/` (pure hook files with no JSX), `store/`, `context/`, `config/`, `db/`, `models/`, `types/`
    - Exception: `src/components/` and `app/components/` are always scanned regardless.
    - Exception: `hooks/` files that contain JSX (render hooks that return components) — scan these. Pure hook files (no JSX) — skip.
+   - Exception: `context/` files that contain JSX (React provider components that render layout wrappers, e.g., ThemeProvider, LayoutProvider) — scan these. Pure context definition files (no JSX — only `createContext`, `useContext`, type definitions) — skip. Detection: if the file contains JSX (`<` tags, className props) — scan it; otherwise skip.
 
 7. **Middleware files** — Next.js middleware contains routing/auth logic, no JSX:
    - Files named `middleware.ts` / `middleware.js` / `middleware.tsx` / `middleware.jsx` in any directory

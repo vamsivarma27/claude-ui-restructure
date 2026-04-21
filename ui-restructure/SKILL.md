@@ -222,6 +222,7 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - These directories contain business logic, utilities, and data access code — not UI components
    - Detection: check the file's directory path. If it contains any of these non-UI segment names between the scan root and the file, skip it.
    - Exception: `hooks/` files that contain JSX (render hooks that return components) — scan these. Pure hook files (no JSX) — skip.
+   - Exception: `context/` files that contain JSX (React provider components that render layout wrappers, e.g., `ThemeProvider`, `LayoutProvider`) — scan these. Pure context definition files (no JSX — only `createContext`, `useContext`, type definitions) — skip. Detection: if the file contains any JSX (`<` tags, `return (`, className props) — scan it; otherwise skip.
    - Note: `src/components/` and `app/components/` (explicit components subdirectories) are always scanned regardless of this rule.
 
 7. **Middleware files** — Next.js middleware intercepts requests at the edge; it contains routing/auth logic, no JSX:
@@ -464,11 +465,20 @@ When Step 3 detected plain `*.css` imports (e.g., `import './styles/card.css'`),
 
 ## Step 7 — Reset Design Tokens
 
-Find token files:
-- `tokens.ts` / `tokens.js`
-- `theme.ts` / `theme.js`
+Find token files by searching the project. Common locations:
+- `tokens.ts` / `tokens.js` (project root or `src/`)
+- `theme.ts` / `theme.js` (project root or `src/`)
 - `design-system.ts`
-- `tailwind.config.ts` (theme.extend section)
+- `tailwind.config.ts` / `tailwind.config.js` (project root — theme.extend section)
+- `globals.css` or `variables.css` — CSS variables in `:root { }` blocks
+
+**Path resolution for `globals.css`:** The file may be in different locations depending on the project structure:
+- Standard Next.js App Router: `app/globals.css`
+- src/ layout convention (App Router inside src/): `src/app/globals.css`
+- Pages Router: `styles/globals.css`
+- React CRA/Vite: `src/index.css` or `src/App.css`
+
+Search for any file named `globals.css` or `variables.css` in the project. When the src/ layout convention is detected (Step 2), look in `src/app/globals.css` first.
 - CSS variables in `globals.css` or `variables.css`
 
 **If `--keep-tokens` flag is set:** Skip this step.
