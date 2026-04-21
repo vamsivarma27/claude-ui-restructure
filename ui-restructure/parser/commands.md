@@ -43,6 +43,9 @@ God Mode cannot combine with:
 - `--mode` — ignored when `--god-mode` is present (warn user)
 - `--keep-tokens` — redundant in god mode (tokens are kept by default; warn user)
 
+God Mode and `--prompt`:
+- `--prompt` is **silently noted but not functionally used** in God Mode. God Mode generates its redesign decisions through the 7-phase user behavior analysis pipeline (Phases 1–7 in `modes/godmode.md`) — not from a custom description string. If `--prompt` is also provided, acknowledge it in the output (e.g., "Note: --prompt was provided but God Mode uses its own user-first analysis pipeline") and proceed with standard God Mode execution. Do NOT error or crash.
+
 ### `--remove-tokens`
 
 Boolean flag (no value). Explicitly resets all design tokens.
