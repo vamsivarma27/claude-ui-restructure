@@ -194,6 +194,13 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - Files with `describe(`, `it(`, `test(`, `expect(` as primary content patterns
    - NEVER modify test files — they are not UI files and contain logic under test.
 
+2b. **Storybook story files** — files that define Storybook stories for component documentation/testing:
+   - `*.stories.tsx` / `*.stories.ts` / `*.stories.jsx` / `*.stories.js`
+   - `*.stories.mdx` — MDX story format
+   - `*.story.tsx` / `*.story.ts` / `*.story.jsx` / `*.story.js` — alternate story extension
+   - Detection: if the filename contains `.stories.` or `.story.` before the file extension — it is a Storybook file. Skip it.
+   - NEVER modify Storybook files — they are documentation/test fixtures, not UI component files. Modifying them would corrupt story args, meta definitions, and story exports, breaking the Storybook build.
+
 3. **Type definition files** — not UI files:
    - `*.d.ts` files
 
@@ -223,7 +230,7 @@ Before processing any file in a scanned directory, check for these exclusion pat
    - Detection: if the filename is `middleware.ts` (or `middleware.js` / `middleware.tsx` / `middleware.jsx`) — it is a middleware file. Skip it.
    - NEVER scan or modify middleware files — they contain no JSX or UI classes. This applies to `middleware.ts` at the project root AND `src/middleware.ts` inside the `src/` scan directory.
 
-Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components, (7) middleware files being scanned despite containing no UI.
+Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (2b) Storybook story files being treated as UI components, (3) TypeScript declarations being touched, (4) Server Action files being scanned despite containing no UI, (5) API route files being scanned despite containing no UI, (6) service layer utility files being scanned and potentially misidentified as UI components, (7) middleware files being scanned despite containing no UI.
 
 For each UI file (after exclusions), build a UI model:
 
@@ -325,6 +332,27 @@ After (logic preserved, layout stripped):
 ```
 
 Repeat for all UI files. Do NOT strip logic. Do NOT strip semantic HTML tags. Do NOT strip key props.
+
+**Non-className HTML attributes — NEVER strip (Non-Negotiable):**
+
+The strip pass targets ONLY the `className` attribute (and `class=` in Vue templates). Every other HTML and JSX attribute on every element MUST be left completely untouched. The following attribute categories are explicitly protected — do not remove, rename, or alter them under any circumstances:
+
+- **Element identity:** `id`, `name`
+- **Element type/role:** `type`, `role`
+- **Form values:** `value`, `defaultValue`, `checked`, `defaultChecked`
+- **Form constraints:** `required`, `disabled`, `readOnly`, `maxLength`, `minLength`, `min`, `max`, `step`, `pattern`, `multiple`
+- **Input hints:** `placeholder`, `autoComplete`, `spellCheck`, `autoFocus`, `autoCapitalize`
+- **Accessibility:** `aria-*` (all ARIA attributes), `htmlFor`, `tabIndex`
+- **Data attributes:** `data-*` (all data attributes — `data-testid`, `data-analytics`, etc.)
+- **React-specific:** `key`, `ref`, `suppressHydrationWarning`, `suppressContentEditableWarning`
+- **Event handlers (all):** `onClick`, `onKeyDown`, `onKeyUp`, `onKeyPress`, `onFocus`, `onBlur`, `onChange`, `onSubmit`, `onMouseEnter`, `onMouseLeave`, `onMouseDown`, `onMouseUp`, `onTouchStart`, `onTouchEnd`, and ALL other `on*` event handlers — these are logic, not styling
+- **Media/link:** `src`, `href`, `alt`, `target`, `rel`, `download`, `action`, `method`
+- **Content:** `dangerouslySetInnerHTML`, `style` (inline style prop — handled separately in Inline styles section)
+- **HTML attributes:** Any attribute not listed in the "strip" category below is preserved as-is
+
+**What you DO strip:** ONLY the string value(s) of `className="..."` attributes that contain Tailwind utility classes for layout, spacing, typography, and color. Nothing else.
+
+If you are uncertain whether an attribute is a layout class or a logic attribute — PRESERVE it. The only attributes that change are `className` (its value is rebuilt) and `class`/`:class` in Vue templates.
 
 **Vue SFC handling (when framework is Vue 3):**
 
@@ -431,6 +459,47 @@ Find token files:
 - Delete or clear the existing token values
 - Do NOT delete the file structure — just reset values
 - Prepare for new token injection in Step 10
+
+**tailwind.config.ts / tailwind.config.js — Protected Fields (Non-Negotiable):**
+
+When resetting tokens in `tailwind.config.ts` or `tailwind.config.js`, ONLY update `theme.extend` values (colors, spacing, borderRadius, fontFamily, boxShadow, etc.). NEVER touch:
+
+1. **`content` array** — tells Tailwind which files to scan for class names. Removing or changing this will cause Tailwind to stop generating CSS for the project's files. PRESERVE exactly.
+2. **`plugins` array** — contains installed Tailwind plugins (e.g., `forms`, `typography`, `animate`). PRESERVE exactly.
+3. **`safelist` array** — contains class names that must always be generated even if not detected in content files. PRESERVE exactly.
+4. **`darkMode` setting** — controls dark mode strategy (`'class'`, `'media'`, `['class', '[data-theme="dark"]']`). PRESERVE exactly.
+5. **Import statements** — `import forms from '@tailwindcss/forms'` and similar plugin imports at the top of the file MUST remain.
+6. **`presets` array** — if present, PRESERVE exactly.
+
+**What changes in tailwind.config during Step 7:**
+- Only values inside `theme.extend` are cleared (colors, borderRadius, fontFamily, boxShadow, spacing)
+
+**What changes in tailwind.config during Step 10 (rebuild):**
+- Only values inside `theme.extend` are replaced with style engine token values
+
+**Example — correct tailwind.config handling:**
+```ts
+// PRESERVE: imports
+import type { Config } from 'tailwindcss'
+import forms from '@tailwindcss/forms'     // ← PRESERVE this import
+
+const config: Config = {
+  darkMode: 'class',                        // ← PRESERVE — never touch
+  content: [                                // ← PRESERVE entire array — never touch
+    './app/**/*.{js,ts,jsx,tsx,mdx}',
+    './components/**/*.{js,ts,jsx,tsx}',
+  ],
+  safelist: ['bg-red-500', 'text-yellow-600'], // ← PRESERVE — never touch
+  theme: {
+    extend: {
+      colors: { primary: '#6366f1' },       // ← UPDATE with engine values
+      borderRadius: { DEFAULT: '0.5rem' },  // ← UPDATE with engine values
+    },
+  },
+  plugins: [forms],                         // ← PRESERVE — never touch
+}
+export default config
+```
 
 **globals.css — Protected Content (Non-Negotiable):**
 

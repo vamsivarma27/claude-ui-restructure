@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 9 bugs fixed in same cycle._
+_None — all Cycle 10 bugs fixed in same cycle._
 
 ---
 
@@ -327,6 +327,48 @@ _None — all Cycle 9 bugs fixed in same cycle._
 
 ---
 
+### BUG-024: Step 6 strip guidance does not explicitly protect non-className HTML attributes
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 10 B1 — `/ui-restructure --style apple` on component with id, data-testid, tabIndex, aria-*, suppressHydrationWarning, onKeyDown, onFocus, onBlur attributes
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 6 (Strip UI Structure), after the "Do NOT strip logic" note
+- Symptom: Step 6's strip instruction says "Identify all layout/spacing/typography classes. Remove them." This is scoped to className values in principle, but there was no explicit "NEVER strip these" list for non-className HTML attributes. A naive implementation could accidentally strip: `id="search-wrapper"` (not a layout class but not explicitly protected), `data-testid="search-container"` (data attributes not mentioned), `tabIndex={0}` (could be confused with layout), `suppressHydrationWarning` (not a styling prop but not explicitly protected), `aria-labelledby` / `aria-autocomplete` (ARIA attributes), `onKeyDown` / `onFocus` / `onBlur` (non-onClick event handlers covered by "logic" rules but not enumerated). Without an explicit "NEVER strip" list, any attribute not covered by "logic" or "semantic HTML" could be at risk.
+- Root Cause: Step 6 relied on the reader understanding that ONLY className values are stripped. There was no explicit enumeration of the many categories of non-className attributes that must be preserved (form attributes, data-*, aria-*, tabIndex, event handlers beyond onClick, etc.). The Behavior Rules protect "event handlers and callbacks" but do not enumerate the full set of JSX attributes covered by that rule.
+- Fix Applied: Added a "Non-className HTML attributes — NEVER strip (Non-Negotiable)" block to Step 6, immediately after the "Do NOT strip logic/tags/keys" note. This block explicitly lists all protected attribute categories: element identity (id, name), type/role, form values, form constraints, input hints, accessibility (all aria-*, htmlFor, tabIndex), data attributes (all data-*), React-specific (key, ref, suppressHydrationWarning), ALL on* event handlers by name, media/link attributes (src, href, alt), and content props (dangerouslySetInnerHTML, style). Ends with: "If uncertain whether an attribute is a layout class or logic — PRESERVE it."
+- Commit: see cycle 10 commit
+- Regression Risk: All components with form inputs, interactive elements, data attributes, or ARIA attributes. Without this fix, any of these non-className attributes could be silently dropped by a strip pass that focused too broadly.
+
+---
+
+### BUG-025: Step 7 tailwind.config token reset is too broad — no explicit protection for content[], plugins[], safelist[], darkMode
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 10 C1 — `/ui-restructure --style linear` on Next.js project with tailwind.config.ts containing content array, safelist, plugins (forms + typography), and darkMode: 'class'
+- Command: `/ui-restructure --style linear`
+- Skill File: `SKILL.md`
+- Line: Step 7 (Reset Design Tokens), tailwind.config section
+- Symptom: Step 7's token reset instruction says "Delete or clear the existing token values. Do NOT delete the file structure — just reset values." For globals.css, an explicit "Protected Content" block was added (BUG-016 fix) specifying exactly what NOT to touch (@tailwind directives, @media blocks, body rules). But for tailwind.config.ts, no equivalent protection existed. The instruction "reset values" could be interpreted to mean clearing the entire config object — which would destroy: (1) the `content` array (Tailwind stops generating CSS for all project files), (2) the `plugins` array (all Tailwind plugin functionality breaks), (3) the `safelist` array (dynamically-needed classes stop being generated), (4) the `darkMode` setting (dark mode strategy resets to default), (5) plugin import statements at the top of the file. Only `theme.extend.*` values should be reset.
+- Root Cause: The tailwind.config handling in Step 7 was added as a brief line ("tailwind.config.ts (theme.extend section)") in the token files list, but no explicit "protected fields" block was ever written — unlike globals.css which got a full protection section. The modes/theme.md "For Tailwind projects" strategy correctly scopes to `theme.extend.*` only, but SKILL.md Step 7 itself lacked the same explicitness.
+- Fix Applied: Added a "tailwind.config.ts / tailwind.config.js — Protected Fields (Non-Negotiable)" block to Step 7, immediately before the globals.css protected content block. Lists 6 protected fields: (1) content array, (2) plugins array, (3) safelist array, (4) darkMode setting, (5) import statements, (6) presets array. Includes a before/after annotated example showing exactly what changes (only theme.extend values) vs what is preserved (all other config sections). Matches the same format and explicitness as the globals.css protection block.
+- Commit: see cycle 10 commit
+- Regression Risk: Any Next.js/React project using tailwind.config with non-default settings — which is effectively every production project. The content array especially is always customized in real apps. Without this fix, a token reset could render Tailwind non-functional by clearing the content array.
+
+---
+
+### BUG-027: Step 4 has no exclusion rule for Storybook story files (*.stories.*, *.story.*)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 10 E1 — `/ui-restructure --style minimal` on project with Button.stories.tsx, Card.stories.mdx, Card.story.tsx alongside components
+- Command: `/ui-restructure --style minimal`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), File exclusion rules section (Rule 2)
+- Symptom: Storybook story files (`Button.stories.tsx`, `Card.stories.mdx`, `Card.story.tsx`) co-exist in the same `components/` directories as component files. Step 4 scans `components/` recursively. The existing exclusion rules only cover: barrel files, `*.test.*`/`*.spec.*` test files, `*.d.ts` declarations, `"use server"` server actions, `route.ts` API routes, service layer subdirectories, and middleware files. Story files are NOT covered: they are not pure re-exports (they have `const meta`, `export const Primary`, etc. — not barrel files), they don't contain `describe/it/test/expect` (not caught by content-pattern detection), they are not `.d.ts` files. Step 6 would attempt to strip Storybook files, potentially removing story `args` property values or component `meta.args` that contain className-like strings (e.g., `args: { variant: 'primary' }`). Step 10 could add layout classes to story files, corrupting story configurations.
+- Root Cause: BUG-015's fix only covered the `*.test.*` and `*.spec.*` naming conventions. Storybook uses a separate `.stories.*` and `.story.*` convention. These were never added as exclusion patterns. Storybook is extremely common in production component libraries and design systems.
+- Fix Applied: Added Rule 2b to Step 4's "File exclusion rules" section, immediately after Rule 2 (test files). Rule 2b covers: `*.stories.tsx/ts/jsx/js`, `*.stories.mdx`, `*.story.tsx/ts/jsx/js`. Detection: filename contains `.stories.` or `.story.` before the extension. Updated the exclusion summary to include "(2b) Storybook story files being treated as UI components."
+- Commit: see cycle 10 commit
+- Regression Risk: Any project using Storybook for component documentation (extremely common in design systems, component libraries, and production apps). Co-located story files in `components/` directories would be scanned and potentially modified on every restructure, corrupting story configurations.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -340,6 +382,7 @@ _None — all Cycle 9 bugs fixed in same cycle._
 | 7 | 2026-04-21 | 26 | 53 | 8 | 87% | Cycle 7 — regressions, output format, layouts/, Framer Motion, barrel files, globals.css, shadcn variants — 4 bugs found and fixed (BUG-013: Framer Motion no detection/guidance; BUG-014: barrel files not excluded; BUG-015: test files not excluded; BUG-016: @tailwind directives unprotected in globals.css) [61 total assertions: 53 pass, 8 fail] |
 | 8 | 2026-04-21 | 29 | 57 | 9 | 86% | Cycle 8 — server actions, API routes, service layer, useReducer, .d.ts, config files, dynamic CSS Modules — 3 bugs found and fixed (BUG-017: "use server" files no scan exclusion; BUG-018: API route files no scan exclusion; BUG-019: service layer subdirs no scan exclusion) [66 total assertions: 57 pass, 9 fail] |
 | 9 | 2026-04-21 | 30+ | 93 | 0 | 100% | Cycle 9 — deep nesting, src/app/, middleware, useLayoutEffect/forwardRef/memo, cn()/clsx(), ARIA preservation, ref props, multi-export files — 4 bugs found and fixed (BUG-020: scan not recursive + route groups; BUG-021: src/app/ pattern not detected; BUG-022: middleware.ts no exclusion rule; BUG-023: cn()/clsx() wrappers no guidance) [93 total assertions: 93 pass, 0 fail — all bugs fixed in-cycle] |
+| 10 | 2026-04-21 | 35+ | 55 | 8 | 87% | Cycle 10 — attribute preservation, tailwind content array, prisma, storybook, React.lazy, dangerouslySetInnerHTML, env vars — FINAL HARDENING — 3 bugs found and fixed (BUG-024: non-className HTML attributes no explicit protection; BUG-025: tailwind.config content/plugins/safelist unprotected; BUG-027: *.stories.* files not excluded) [63 total assertions: 55 pass, 8 fail — all bugs fixed in-cycle] |
 
 ---
 
