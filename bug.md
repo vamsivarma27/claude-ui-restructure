@@ -13,7 +13,7 @@
 
 ## Active Bugs
 
-_None — all Cycle 6 bugs fixed in same cycle._
+_None — all Cycle 7 bugs fixed in same cycle._
 
 ---
 
@@ -173,6 +173,62 @@ _None — all Cycle 6 bugs fixed in same cycle._
 
 ---
 
+### BUG-013: SKILL.md Step 3 does not detect Framer Motion; Step 11 has no concrete application guidance for Framer Motion variants
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 7 D1 — `/ui-restructure --style apple` on Next.js project using `framer-motion`
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 3 (Detect Styling System, line ~130), Step 11 (Polish Pass, Motion bullet)
+- Symptom: Step 3 detects styling systems (Tailwind, CSS Modules, styled-components, shadcn, inline styles, plain CSS) but has no detection for `framer-motion` — an animation library used in many React projects. Step 11 Motion bullet says "Use Framer Motion spring presets if the project already uses Framer Motion" — but provides NO guidance on: (1) how to detect Framer Motion (check package.json? scan imports?), (2) which specific props to add (`whileHover`, `whileTap`?), (3) that `motion.div` tags must not be converted to plain `div`, (4) that existing Framer Motion props must not be overwritten. Without detection, the skill cannot know to use Framer Motion. Without application guidance, the skill defaults to CSS transitions (`transition-all active:scale-[0.97]`) even on projects where Framer Motion is already in use, producing a mixed and inconsistent motion system.
+- Root Cause: Step 3's detection table was written listing CSS/styling systems only. `framer-motion` is an animation library (not a CSS system) and was never added to the detection scan. Step 11's single-line Framer Motion reference was aspirational but not actionable — no concrete instructions existed for the Framer Motion branch of Step 11.
+- Fix Applied: (1) Added Framer Motion detection subsection to Step 3: scan `package.json` and component imports for `framer-motion`. Record `framer-motion: true`. (2) Expanded Step 11 Motion bullet with a full "Framer Motion branch" instruction block: use `buttonPress` preset (whileTap), `whileHover={{ y: -2 }}` for cards, `staggerContainer`/`staggerItem` for lists, preserve all existing `motion.*` tags and props, do not add CSS transition classes when Framer Motion variants are in use. Added "CSS-only branch" label for the existing CSS transition instructions.
+- Commit: see cycle 7 commit
+- Regression Risk: All projects using Framer Motion. Before the fix, the skill had no detection for framer-motion and no concrete application path, causing CSS transitions to be applied alongside or instead of Framer Motion variants — resulting in a broken/inconsistent animation system.
+
+---
+
+### BUG-014: Step 4 has no exclusion rule for barrel files (pure re-export index.ts files)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 7 E1 — `/ui-restructure --style linear` on project with `components/index.ts` barrel file
+- Command: `/ui-restructure --style linear`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files, line ~162), Step 6 (Strip UI Structure)
+- Symptom: Step 4 scans `components/`, `src/`, `layouts/` for UI files. A barrel file like `components/index.ts` — containing only `export { default as Card } from './Card'` statements — would be encountered during the directory scan. There is no exclusion rule for barrel files. Step 6 would attempt to "process" the barrel file, and Step 10's rebuild could accidentally modify it (adding import statements, changing export structure). Modifying a barrel file would break all re-export paths and cause compile errors across the entire project.
+- Root Cause: Step 4's scan instructions were written assuming all files in `components/` are UI component files with JSX and classNames. The barrel file pattern (pure re-exports, no JSX) was never considered or excluded.
+- Fix Applied: Added "File exclusion rules" section to Step 4 after the conditional scan instructions. Rule 1 covers barrel files: detect files with only `export {...} from '...'` statements and no JSX (no `<` tags, no `className`, no `style=`) — skip them. Applies to any file name (commonly `index.ts`/`index.tsx` but can be any name). Also added exclusion rules for test files (Rule 2, addressed by BUG-015) and type definition files (Rule 3, `*.d.ts`).
+- Commit: see cycle 7 commit
+- Regression Risk: Any project that uses barrel files for component exports (extremely common in React/Next.js projects). Before the fix, barrel files were at risk of being processed and potentially corrupted during the rebuild phase.
+
+---
+
+### BUG-015: Step 4 has no exclusion rule for test files (*.test.tsx, *.spec.tsx)
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 7 E1 — `/ui-restructure --style linear` on project with `Button.test.tsx`
+- Command: `/ui-restructure --style linear`
+- Skill File: `SKILL.md`
+- Line: Step 4 (Scan UI Files), Step 6 (Strip UI Structure)
+- Symptom: Step 4 scans `components/` unconditionally. A project with `components/Button.test.tsx` alongside `components/Button.tsx` would have the test file encountered during the scan. Test files contain `describe`, `it`, `expect` blocks, mock implementations, and render calls — NOT UI layout classes. Step 6 would attempt to strip the test file and Step 10 would attempt to rebuild it. This would corrupt test files by removing test assertions, breaking the test suite.
+- Root Cause: Step 4's scan scope was never restricted to exclude files by naming convention. Test files (`*.test.*`, `*.spec.*`) are standard in any well-maintained React project and coexist in the same directories as component files. No exclusion was ever defined.
+- Fix Applied: Added Rule 2 to the "File exclusion rules" section in Step 4 (added alongside BUG-014 fix): exclude `*.test.tsx`, `*.test.ts`, `*.test.jsx`, `*.test.js`, `*.spec.tsx`, `*.spec.ts`, `*.spec.jsx`, `*.spec.js`, and `__tests__/` directory contents. Also identifies by content pattern: files with `describe(`, `it(`, `test(`, `expect(` as primary content.
+- Commit: see cycle 7 commit
+- Regression Risk: Any project with a co-located test suite (the most common React testing pattern). Before the fix, test files were at risk of being scanned, stripped of "className" patterns (which are valid in render calls), and corrupted during rebuild.
+
+---
+
+### BUG-016: Step 7 lacks explicit protection for @tailwind directives and non-variable CSS in globals.css
+- Status: [FIXED 2026-04-21]
+- Persona: Cycle 7 F1 — `/ui-restructure --style apple` on Next.js project with globals.css containing @tailwind directives
+- Command: `/ui-restructure --style apple`
+- Skill File: `SKILL.md`
+- Line: Step 7 (Reset Design Tokens, line ~349), Step 10 (Rebuild UI)
+- Symptom: Step 7 identifies `globals.css` as a token file (it contains `:root { --color: ... }` CSS variables) and instructs: "Delete or clear the existing token values. Do NOT delete the file structure — just reset values." However, a typical Next.js `globals.css` also contains `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` directives, `@media (prefers-color-scheme: dark) { :root { ... } }` blocks, `body { ... }` rules, and `@layer` directives. The instruction "reset values" is ambiguous — a naive implementation could interpret this as rewriting the entire file with only `:root { --color: ; }` blocks, destroying the `@tailwind` directives and causing Tailwind compilation to fail entirely.
+- Root Cause: Step 7 was written assuming `globals.css` contains only CSS variable declarations. It did not account for the presence of `@tailwind` directives, `@media` blocks, `body` rules, and `@layer` blocks that must be preserved verbatim. "Do NOT delete the file structure" is insufficient guidance when the file structure includes Tailwind build directives.
+- Fix Applied: Added a "globals.css — Protected Content (Non-Negotiable)" subsection to Step 7 with explicit rules: NEVER touch `@tailwind base/components/utilities` directives, NEVER remove `@media` query blocks (only update variable values inside them), preserve `body {}` and other CSS rules, preserve `@layer` directives and `@import` statements. Added a before/after annotated example showing exactly what changes (CSS variable values) vs what is preserved (all directives and rules). The same protection applies in Step 10 during the rebuild/update phase.
+- Commit: see cycle 7 commit
+- Regression Risk: All Next.js projects (App Router and Pages Router) — `app/globals.css` or `styles/globals.css` is a standard file in every Next.js project and almost always contains `@tailwind` directives. Before the fix, the skill could destroy Tailwind compilation by removing these directives during token reset.
+
+---
+
 ## Cycle History
 
 | Cycle | Date | Personas Run | Pass | Fail | Avg Score | Notes |
@@ -183,6 +239,7 @@ _None — all Cycle 6 bugs fixed in same cycle._
 | 4 | 2026-04-21 | 13 | 9 | 4 | 75% | Cycle 4 — engine audit + untested paths — 4 bugs found and fixed (BUG-005: motion missing all engines; BUG-006: aria-hidden checklist gap; BUG-007: grid list reverse missing; BUG-008: inline styles no guidance) |
 | 5 | 2026-04-21 | 19 | 19 | 0 | 100% | Cycle 5 — regression sweep + new combinations — 4 regressions all pass, 10 personas all pass, 5 new combos: 1 doc bug (BUG-009: --prompt + --god-mode undocumented) found and fixed |
 | 6 | 2026-04-21 | 20 | 50 | 13 | 79% | Cycle 6 — RSC, plain CSS, cross-imports, mixed styling, God Mode phases — 2 bugs found and fixed (BUG-010: RSC Server/Client Component distinction missing; BUG-011: plain CSS class-value rebuild guidance missing) [63 total assertions: 50 pass, 13 fail] |
+| 7 | 2026-04-21 | 26 | 53 | 8 | 87% | Cycle 7 — regressions, output format, layouts/, Framer Motion, barrel files, globals.css, shadcn variants — 4 bugs found and fixed (BUG-013: Framer Motion no detection/guidance; BUG-014: barrel files not excluded; BUG-015: test files not excluded; BUG-016: @tailwind directives unprotected in globals.css) [61 total assertions: 53 pass, 8 fail] |
 
 ---
 

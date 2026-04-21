@@ -142,6 +142,17 @@ Scan for:
 
 Multiple systems may coexist. Record all detected systems.
 
+**Framer Motion detection (animation library — separate from styling system):**
+
+Also check for Framer Motion in the project:
+- `framer-motion` in `package.json` dependencies or devDependencies
+- `import { motion } from 'framer-motion'` in any component file
+
+If Framer Motion is detected:
+- Record `framer-motion: true` alongside the styling system
+- Step 11 (Polish Pass) MUST use Framer Motion variants instead of CSS transition classes for all motion effects
+- Note in your reasoning: "Framer Motion detected — Step 11 will use motion variants"
+
 ---
 
 ## Step 4 — Scan UI Files
@@ -159,7 +170,28 @@ Scan directories based on the detected framework (Step 2):
 
 If both `app/` and `pages/` exist and App Router was detected: scan `app/` only. Do NOT scan or modify files in `pages/`.
 
-For each UI file, build a UI model:
+**File exclusion rules — NEVER scan or modify these files:**
+
+Before processing any file in a scanned directory, check for these exclusion patterns. Skip any file that matches:
+
+1. **Barrel files** — files that contain ONLY re-export statements and no JSX/UI rendering:
+   - Files whose entire content consists of `export { ... } from '...'`, `export * from '...'`, `export type { ... } from '...'`, or `export default ... from '...'` lines
+   - Typically named `index.ts`, `index.tsx`, `index.js`, but can be any name
+   - Detection: if a file has no JSX (`<` tags), no `className`, no `style=`, and only export statements — it is a barrel file. Skip it.
+
+2. **Test files** — files that contain test assertions and mock implementations:
+   - `*.test.tsx` / `*.test.ts` / `*.test.jsx` / `*.test.js`
+   - `*.spec.tsx` / `*.spec.ts` / `*.spec.jsx` / `*.spec.js`
+   - `__tests__/` directory contents
+   - Files with `describe(`, `it(`, `test(`, `expect(` as primary content patterns
+   - NEVER modify test files — they are not UI files and contain logic under test.
+
+3. **Type definition files** — not UI files:
+   - `*.d.ts` files
+
+Applying these exclusions prevents: (1) barrel files being accidentally modified and breaking re-export paths, (2) test files being treated as UI components, (3) TypeScript declarations being touched.
+
+For each UI file (after exclusions), build a UI model:
 
 ```
 UI Model:
@@ -330,6 +362,46 @@ Find token files:
 - Do NOT delete the file structure — just reset values
 - Prepare for new token injection in Step 10
 
+**globals.css — Protected Content (Non-Negotiable):**
+
+When resetting CSS variables in `globals.css`, ONLY update the CSS custom property values inside `:root { }` blocks. NEVER touch:
+
+1. **`@tailwind` directives** — `@tailwind base;`, `@tailwind components;`, `@tailwind utilities;` MUST remain exactly as-is. These are Tailwind build directives, not token values. Removing or modifying them will break the entire Tailwind compilation.
+2. **`@media` query blocks** — preserve the `@media (prefers-color-scheme: dark) { ... }` structure. Only update the CSS variable VALUES inside the `:root { }` within those blocks.
+3. **`body { }` and other CSS rules** — preserve all non-variable CSS rules (body font-family, base styles, etc.).
+4. **`@layer` directives** — `@layer base { ... }`, `@layer components { ... }`, `@layer utilities { ... }` must be preserved.
+5. **Import statements** — `@import` lines must not be removed.
+
+**What changes in globals.css during Step 7:**
+- CSS custom property VALUES inside `:root { }` blocks: clear them (e.g., `--background: ;`)
+
+**What changes in globals.css during Step 10 (rebuild):**
+- CSS custom property VALUES inside `:root { }` blocks: set to new style engine values
+- CSS custom property VALUES inside `@media (prefers-color-scheme: dark) { :root { } }`: set to engine dark mode values
+
+**Example — correct globals.css handling:**
+```css
+/* BEFORE */
+@tailwind base;           ← PRESERVE exactly
+@tailwind components;     ← PRESERVE exactly
+@tailwind utilities;      ← PRESERVE exactly
+
+:root {
+  --background: #ffffff;  ← UPDATE value only
+  --primary: #6366f1;     ← UPDATE value only
+}
+
+@media (prefers-color-scheme: dark) {  ← PRESERVE block structure
+  :root {
+    --background: #0a0a0a;             ← UPDATE value only
+  }
+}
+
+body {                    ← PRESERVE entire rule
+  font-family: system-ui;
+}
+```
+
 ---
 
 ## Step 8 — Load Style Engine
@@ -443,7 +515,15 @@ After rebuilding all UI files, read `references/ui-craft.md` and apply the full 
 - Apply correct easing curves (ease-out for entrance, ease-in for exit, spring for press)
 - Add `active:scale-[0.97]` to all buttons
 - Add `hover:translateY(-2px)` + shadow transition to all clickable cards
-- Use Framer Motion spring presets if the project already uses Framer Motion
+- **Framer Motion branch (when Step 3 detected `framer-motion: true`):** Use Framer Motion variants INSTEAD of CSS transition classes. Specifically:
+  - Wrap interactive buttons with `motion.button` (or add `whileTap={{ scale: 0.97 }}` to existing `motion.*` elements) using the `buttonPress` preset from `references/ui-craft.md` Section 1
+  - Add `whileHover={{ y: -2 }}` + `transition={{ type: "spring", stiffness: 300, damping: 20 }}` to clickable card elements (use `motion.div` wrapper)
+  - For list/grid entrances, wrap the container with `motion.div` and use the `staggerContainer` + `staggerItem` presets from `references/ui-craft.md` Section 1
+  - Preserve ALL existing `motion.*` element tags — do NOT convert `motion.div` to `div`
+  - Preserve ALL existing Framer Motion props (`animate`, `initial`, `exit`, `variants`, `transition`, `whileHover`, `whileTap`) on existing motion elements — only ADD new ones, never remove or overwrite
+  - Do NOT add CSS `transition-*` classes to elements that already use Framer Motion variants
+  - Note in output: "Framer Motion detected — spring variants applied (whileTap, whileHover, stagger)
+- **CSS-only branch (when Step 3 did NOT detect Framer Motion):** Apply CSS transition classes as specified above (transition-all, active:scale-[0.97], etc.)
 
 **States:**
 - Every button must have: default, hover, focus-visible, active, disabled styles
@@ -484,9 +564,12 @@ Style: [applied style]
 Mode: [applied mode]
 Files modified: [count]
 Logic preserved: ✓ (hooks, handlers, API calls untouched)
-Tokens regenerated: ✓ / Tokens kept: ✓
+[Tokens regenerated: ✓]  ← use this line when tokens were reset (default, no --keep-tokens)
+[Tokens kept: ✓]         ← use this line when --keep-tokens was passed (one line only, not both)
 Polish pass: ✓ (motion, states, typography, icons, accessibility)
 ```
+
+Note: Output exactly ONE of the two tokens lines based on the flag — `Tokens regenerated: ✓` when tokens were reset and rebuilt, `Tokens kept: ✓` when `--keep-tokens` was passed. Never output both lines.
 
 ---
 
